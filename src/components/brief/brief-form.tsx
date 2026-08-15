@@ -5,6 +5,10 @@ import { useRef, useState, type FormEvent } from "react";
 import { ImageGuidance } from "@/components/brief/image-guidance";
 
 export type SubmitBrief = (payload: FormData) => Promise<{ briefId: string }>;
+export type ReplaceBriefPhoto = (briefId: string, payload: FormData) => Promise<void>;
+export type DeleteBrief = (
+  briefId: string,
+) => Promise<{ status: "deleted" | "deleting"; message: string }>;
 
 export class BriefSubmissionError extends Error {
   readonly code: string;
@@ -34,6 +38,158 @@ async function defaultSubmitBrief(payload: FormData): Promise<{ briefId: string 
     );
   }
   return { briefId: body.briefId };
+}
+
+async function defaultReplaceBriefPhoto(briefId: string, payload: FormData): Promise<void> {
+  const response = await fetch(`/api/briefs/${briefId}`, {
+    method: "PUT",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: payload,
+  });
+  if (!response.ok) {
+    const body = (await response.json()) as { guidance?: string };
+    throw new Error(body.guidance ?? "Relay could not replace this photo. Please try again.");
+  }
+}
+
+async function defaultDeleteBrief(briefId: string): ReturnType<DeleteBrief> {
+  const response = await fetch(`/api/briefs/${briefId}`, { method: "DELETE" });
+  const body = (await response.json()) as {
+    status?: "deleted" | "deleting";
+    message?: string;
+  };
+  if (!response.ok || !body.status || !body.message) {
+    throw new Error("Relay could not finish deleting these images. Please retry.");
+  }
+  return { status: body.status, message: body.message };
+}
+
+export function BriefDeletionControl({
+  briefId,
+  deleteBrief = defaultDeleteBrief,
+}: {
+  briefId: string;
+  deleteBrief?: DeleteBrief;
+}) {
+  const [confirmed, setConfirmed] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function removeImages() {
+    setPending(true);
+    setError(null);
+    try {
+      const result = await deleteBrief(briefId);
+      setMessage(result.message);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Relay could not delete these images.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <details className="privacy-control">
+      <summary>Privacy and image deletion</summary>
+      {message ? (
+        <p role="status">{message}</p>
+      ) : (
+        <div className="privacy-control__body">
+          <p>
+            This removes your uploaded photo and every generated preview from Relay. Garment and reservation audit details remain without your images.
+          </p>
+          <label className="consent-row">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(event) => setConfirmed(event.currentTarget.checked)}
+            />
+            Delete my uploaded photo and generated previews.
+          </label>
+          {error && <p className="form-error" role="alert">{error}</p>}
+          <button
+            className="destructive-action"
+            type="button"
+            disabled={!confirmed || pending}
+            onClick={removeImages}
+          >
+            {pending ? "Deleting Relay images…" : "Delete my Relay images"}
+          </button>
+        </div>
+      )}
+    </details>
+  );
+}
+
+export function BriefPhotoReplacement({
+  briefId,
+  replacePhoto = defaultReplaceBriefPhoto,
+  onReplaced,
+}: {
+  briefId: string;
+  replacePhoto?: ReplaceBriefPhoto | undefined;
+  onReplaced: () => void | Promise<void>;
+}) {
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [consent, setConsent] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!photo || !consent) {
+      setError("Choose a replacement photo and confirm consent.");
+      return;
+    }
+    const payload = new FormData();
+    payload.set("photo", photo);
+    payload.set("photoConsent", "true");
+    setPending(true);
+    setError(null);
+    try {
+      await replacePhoto(briefId, payload);
+      await onReplaced();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Relay could not replace this photo.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <section className="photo-replacement" aria-labelledby="photo-replacement-title">
+      <div>
+        <p className="eyebrow">Your event details are saved</p>
+        <h2 id="photo-replacement-title">Replace your photo</h2>
+        <p>
+          YouCam could not use the original pose or composition. Add a clear, forward-facing full-body photo; Relay will keep the rest of your brief.
+        </p>
+      </div>
+      <form onSubmit={submit}>
+        <label>
+          Replacement full-body photo
+          <input
+            type="file"
+            accept="image/jpeg,image/png"
+            onChange={(event) => setPhoto(event.currentTarget.files?.[0] ?? null)}
+          />
+        </label>
+        <label className="consent-row">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(event) => setConsent(event.currentTarget.checked)}
+          />
+          I consent to processing this replacement photo for virtual try-on previews.
+        </label>
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <button className="primary-action" type="submit" disabled={pending}>
+          {pending ? "Replacing…" : "Replace photo and retry"}
+        </button>
+      </form>
+    </section>
+  );
 }
 
 function text(form: FormData, name: string): string {

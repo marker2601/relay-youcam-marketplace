@@ -48,6 +48,10 @@ function getMediaRuntime(): MediaRuntime {
 type MediaRecord = typeof mediaObjects.$inferSelect;
 
 export function canReadMedia(actor: DemoSession, media: MediaRecord): boolean {
+  if (media.deletionStatus !== "active" || media.deletedAt !== null) {
+    return false;
+  }
+
   if (actor.role === "provider") {
     return actor.userId === media.ownerUserId && media.kind === "listing_garment";
   }

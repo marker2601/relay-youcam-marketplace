@@ -88,9 +88,16 @@ export function OfferCard({ offer, onImageExpired }: OfferCardProps) {
         {offer.status === "matched" && <p className="preview-state">Preview queued</p>}
         {offer.status === "generating" && <p className="preview-state">Preparing your preview</p>}
         {failed && (
-          <p className="preview-state preview-state--failed">
-            Preview unavailable—garment can still be reviewed
-          </p>
+          <>
+            <p className="preview-state preview-state--failed">
+              Preview unavailable—garment can still be reviewed
+            </p>
+            {offer.failureGuidance === "listing_image" && (
+              <p className="offer-recovery-guidance">
+                The provider needs to replace this listing image. Your other offers are unaffected.
+              </p>
+            )}
+          </>
         )}
 
         <dl className="offer-facts">

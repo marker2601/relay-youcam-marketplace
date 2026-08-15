@@ -11,6 +11,15 @@ import {
   providerRequestSchema,
   reservationDetailSchema,
 } from "@/lib/domain/schemas";
+import {
+  ConflictHttpError,
+  NotFoundHttpError,
+  PayloadTooLargeHttpError,
+  RateLimitedHttpError,
+  UnauthenticatedHttpError,
+  ValidationHttpError,
+  toHttpErrorResponse,
+} from "@/lib/http/errors";
 
 const ids = {
   brief: "10000000-0000-4000-8000-000000000001",
@@ -106,5 +115,23 @@ describe("public API response contracts", () => {
     } satisfies ReservationDetail;
 
     expect(reservationDetailSchema.parse(reservation).simulation).toBe(true);
+  });
+
+  it.each([
+    [new ValidationHttpError("invalid_command"), 400, "invalid_command"],
+    [new UnauthenticatedHttpError(), 401, "unauthenticated"],
+    [new NotFoundHttpError(), 404, "not_found"],
+    [new ConflictHttpError("reservation_conflict"), 409, "reservation_conflict"],
+    [new PayloadTooLargeHttpError(), 413, "payload_too_large"],
+    [new RateLimitedHttpError(), 429, "rate_limited"],
+    [new Error("secret upstream body and stack"), 500, "internal_error"],
+  ])("maps a safe HTTP error contract", async (error, status, code) => {
+    const response = toHttpErrorResponse(error, "request-safe-123");
+    expect(response.status).toBe(status);
+    expect(response.headers.get("x-request-id")).toBe("request-safe-123");
+    const body = await response.json();
+    expect(body).toEqual({ code, requestId: "request-safe-123" });
+    expect(JSON.stringify(body)).not.toContain("secret upstream body");
+    expect(JSON.stringify(body)).not.toContain("stack");
   });
 });

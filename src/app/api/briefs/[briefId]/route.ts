@@ -8,6 +8,12 @@ import { getServerEnv } from "@/lib/config/env";
 import { createDatabaseConnection, type Database, type DatabaseConnection } from "@/lib/db/client";
 import { eventBriefs, matches, mediaObjects, offers } from "@/lib/db/schema";
 import { ImageValidationError, validateImage } from "@/lib/images/validate-image";
+import {
+  NotFoundHttpError,
+  PayloadTooLargeHttpError,
+  UnauthenticatedHttpError,
+  toHttpErrorResponse,
+} from "@/lib/http/errors";
 import { actorFromRequest } from "@/lib/http/request-auth";
 import { BriefRepository, NotFoundError } from "@/lib/repositories/briefs";
 import { MarketplaceRepository } from "@/lib/repositories/marketplace";
@@ -208,6 +214,9 @@ export function createBriefResourceHandlers(options: ResourceOptions) {
         validated = await validateImage(bytes, photo.type);
       } catch (error) {
         if (error instanceof ImageValidationError) {
+          if (error.code === "too_large") {
+            return toHttpErrorResponse(new PayloadTooLargeHttpError());
+          }
           return Response.json({ code: error.code, guidance: error.guidance }, { status: 400 });
         }
         return Response.json({ code: "invalid_image" }, { status: 400 });
@@ -216,6 +225,9 @@ export function createBriefResourceHandlers(options: ResourceOptions) {
       let newObjectKey: string | undefined;
       try {
         const brief = await briefs.getById(actor, parsedId.data);
+        if (!brief.shopperMediaId || brief.status === "deleting" || brief.status === "deleted") {
+          throw new NotFoundError();
+        }
         const [oldMedia] = await options.db
           .select()
           .from(mediaObjects)
@@ -316,6 +328,52 @@ export function createBriefResourceHandlers(options: ResourceOptions) {
         return Response.json({ code: "photo_replacement_failed" }, { status: 500 });
       }
     },
+
+    async delete(request: Request, context: { params: Promise<{ briefId: string }> }) {
+      const actor = await authenticate(request);
+      if (!actor) return toHttpErrorResponse(new UnauthenticatedHttpError());
+      const parsedId = await idFromContext(context);
+      if (!parsedId.success) return toHttpErrorResponse(new NotFoundHttpError());
+      const currentTime = options.now?.() ?? new Date();
+      try {
+        const candidates = await briefs.prepareDeletion(actor, parsedId.data, currentTime);
+        await Promise.all(
+          candidates.map(async (candidate) => {
+            try {
+              await options.objectStore.delete(candidate.objectKey);
+              await briefs.recordDeletionResult({
+                mediaId: candidate.id,
+                succeeded: true,
+                now: currentTime,
+              });
+            } catch {
+              await briefs.recordDeletionResult({
+                mediaId: candidate.id,
+                succeeded: false,
+                now: currentTime,
+              });
+            }
+          }),
+        );
+        const status = await briefs.finishDeletion(actor, parsedId.data, currentTime);
+        return Response.json(
+          {
+            briefId: parsedId.data,
+            status,
+            message:
+              status === "deleted"
+                ? "Relay has deleted its stored copies. Perfect Corp. may retain API files for up to 30 days under its documented policy."
+                : "Relay has revoked access and is retrying deletion of one or more stored copies. Perfect Corp. may retain API files for up to 30 days under its documented policy.",
+          },
+          { status: status === "deleted" ? 200 : 202 },
+        );
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          return toHttpErrorResponse(new NotFoundHttpError());
+        }
+        return toHttpErrorResponse(error);
+      }
+    },
   };
 }
 
@@ -363,4 +421,11 @@ export async function PUT(
   context: { params: Promise<{ briefId: string }> },
 ) {
   return runtimeHandlers().put(request, context);
+}
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ briefId: string }> },
+) {
+  return runtimeHandlers().delete(request, context);
 }

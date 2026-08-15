@@ -15,6 +15,7 @@ import {
 } from "@/lib/db/schema";
 import { createBriefCommandSchema, type CreateBriefCommand } from "@/lib/domain/schemas";
 import { ImageValidationError, validateImage } from "@/lib/images/validate-image";
+import { PayloadTooLargeHttpError, toHttpErrorResponse } from "@/lib/http/errors";
 import { MarketplaceRepository } from "@/lib/repositories/marketplace";
 import type { ObjectStore } from "@/lib/storage/object-store";
 import { createBriefSourceKey, S3ObjectStore } from "@/lib/storage/s3-object-store";
@@ -183,6 +184,9 @@ export function createBriefPostHandler(options: CreateBriefPostHandlerOptions) {
       validated = await validateImage(bytes, photo.type);
     } catch (error) {
       if (error instanceof ImageValidationError) {
+        if (error.code === "too_large") {
+          return toHttpErrorResponse(new PayloadTooLargeHttpError());
+        }
         return Response.json(
           { code: error.code, guidance: error.guidance },
           { status: 400 },

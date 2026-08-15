@@ -69,4 +69,15 @@ describe("media authorization", () => {
     ).toBe(true);
     expect(canReadMedia(shopper, media({ ownerUserId: provider.userId }))).toBe(true);
   });
+
+  it("revokes every signed-read path as soon as deletion starts", () => {
+    expect(canReadMedia(shopper, media({ deletionStatus: "deleting" }))).toBe(false);
+    expect(
+      canReadMedia(
+        shopper,
+        media({ deletionStatus: "deleted", deletedAt: new Date("2026-08-15T16:00:00.000Z") }),
+      ),
+    ).toBe(false);
+    expect(canReadMedia(provider, media({ deletionStatus: "delete_failed" }))).toBe(false);
+  });
 });

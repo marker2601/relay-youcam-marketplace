@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import type { Database } from "@/lib/db/client";
@@ -140,6 +140,10 @@ export class MarketplaceRepository {
   }
 
   async createMatchesAndJobs(input: CreateMatchesAndJobsInput): Promise<CreatedJobGraph> {
+    await this.db
+      .delete(idempotencyKeys)
+      .where(lt(idempotencyKeys.createdAt, new Date(input.now.getTime() - 7 * 24 * 60 * 60_000)));
+
     const [existingKey] = await this.db
       .select()
       .from(idempotencyKeys)

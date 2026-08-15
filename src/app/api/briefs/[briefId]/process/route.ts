@@ -4,6 +4,12 @@ import { z } from "zod";
 import { getServerEnv } from "@/lib/config/env";
 import { createDatabaseConnection, type Database, type DatabaseConnection } from "@/lib/db/client";
 import { actorFromRequest } from "@/lib/http/request-auth";
+import {
+  NotFoundHttpError,
+  RateLimitedHttpError,
+  UnauthenticatedHttpError,
+  toHttpErrorResponse,
+} from "@/lib/http/errors";
 import { BriefRepository, NotFoundError } from "@/lib/repositories/briefs";
 import { MarketplaceRepository } from "@/lib/repositories/marketplace";
 import { getAuthorizedOfferSnapshot } from "@/lib/repositories/offer-read";
@@ -36,21 +42,21 @@ export function createBriefProcessHandler(options: ProcessHandlerOptions) {
   ): Promise<Response> => {
     const currentTime = options.now?.() ?? new Date();
     const actor = actorFromRequest(request, options.sessionSecret, currentTime.getTime());
-    if (!actor) return Response.json({ code: "unauthenticated" }, { status: 401 });
+    if (!actor) return toHttpErrorResponse(new UnauthenticatedHttpError());
     const id = z.uuid().safeParse((await context.params).briefId);
-    if (!id.success) return Response.json({ code: "not_found" }, { status: 404 });
+    if (!id.success) return toHttpErrorResponse(new NotFoundHttpError());
     try {
       await briefs.getById(actor, id.data);
     } catch (error) {
       if (error instanceof NotFoundError) {
-        return Response.json({ code: "not_found" }, { status: 404 });
+        return toHttpErrorResponse(new NotFoundHttpError());
       }
       throw error;
     }
 
     const prior = limiter.get(id.data);
     if (prior !== undefined && currentTime.getTime() - prior < 2_000) {
-      return Response.json({ code: "rate_limited" }, { status: 429 });
+      return toHttpErrorResponse(new RateLimitedHttpError());
     }
     limiter.set(id.data, currentTime.getTime());
     await options.orchestrator.advanceBrief(id.data, currentTime);

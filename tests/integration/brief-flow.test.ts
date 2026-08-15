@@ -257,6 +257,25 @@ describe("createMatchesAndJobs", () => {
     expect(await testDb.select().from(tryOnJobs)).toHaveLength(3);
     expect(await testDb.select().from(idempotencyKeys)).toHaveLength(1);
   });
+
+  it("prunes idempotency records older than seven days", async () => {
+    await testDb.insert(idempotencyKeys).values({
+      actorId: seedIds.shopper,
+      scope: "stale-command",
+      key: "stale-command-key",
+      createdAt: new Date(baseNow.getTime() - 8 * 24 * 60 * 60_000),
+    });
+
+    await new MarketplaceRepository(testDb).createMatchesAndJobs({
+      briefId: canonicalBriefId,
+      actorId: seedIds.shopper,
+      idempotencyKey: "pruning-command-key",
+      now: baseNow,
+    });
+
+    const keys = await testDb.select().from(idempotencyKeys);
+    expect(keys.map((key) => key.key)).toEqual(["pruning-command-key"]);
+  });
 });
 
 describe("TryOnOrchestrator", () => {

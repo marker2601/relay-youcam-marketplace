@@ -467,11 +467,76 @@ h1 {
 }
 
 .generation-notice,
-.no-match-panel {
+.no-match-panel,
+.photo-replacement {
   padding: 1.25rem;
   border: 1px solid #d9b7ad;
   border-radius: 1rem;
   background: #fff8f4;
+}
+
+.photo-replacement {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.photo-replacement h2,
+.photo-replacement p {
+  margin-top: 0;
+}
+
+.photo-replacement form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.photo-replacement label:not(.consent-row) {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 700;
+}
+
+.offer-recovery-guidance {
+  margin: -0.35rem 0 0;
+  color: #7c3d33;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.privacy-control {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: #fffdf8;
+}
+
+.privacy-control summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.privacy-control__body {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.privacy-control__body p {
+  margin: 0;
+}
+
+.destructive-action {
+  justify-self: start;
+  min-height: 2.75rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid #a53f30;
+  border-radius: 999px;
+  background: white;
+  color: #8a3328;
+  font: inherit;
+  font-weight: 800;
 }
 
 .generation-notice {
@@ -549,7 +614,9 @@ h1 {
 
 .offer-action:focus-visible,
 .generation-notice button:focus-visible,
-.refinement-form :is(input, select, button):focus-visible {
+.refinement-form :is(input, select, button):focus-visible,
+.photo-replacement :is(input, button):focus-visible,
+.privacy-control :is(input, button, summary):focus-visible {
   outline: 3px solid #d75f4a;
   outline-offset: 3px;
 }
@@ -574,7 +641,8 @@ h1 {
 @media (max-width: 44rem) {
   .offer-progress__intro,
   .offer-grid,
-  .refinement-form {
+  .refinement-form,
+  .photo-replacement {
     grid-template-columns: 1fr;
   }
 

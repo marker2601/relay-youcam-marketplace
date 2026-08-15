@@ -53,6 +53,7 @@ export async function getAuthorizedOfferSnapshot(
       explanations: matches.explanation,
       garmentObjectKey: garmentMedia.objectKey,
       resultObjectKey: resultMedia.objectKey,
+      normalizedErrorCode: tryOnJobs.normalizedErrorCode,
       expiresAt: offers.expiresAt,
     })
     .from(matches)
@@ -100,6 +101,14 @@ export async function getAuthorizedOfferSnapshot(
         row.status === "ready" && row.resultObjectKey
           ? await objectStore.createReadUrl(row.resultObjectKey, offerUrlTtlSeconds)
           : null,
+      failureGuidance:
+        row.status !== "failed"
+          ? null
+          : row.normalizedErrorCode === "invalid_reference"
+            ? ("listing_image" as const)
+            : row.normalizedErrorCode === "invalid_source"
+              ? null
+              : ("preview" as const),
       expiresAt: row.expiresAt.toISOString(),
     })),
   );
@@ -108,6 +117,9 @@ export async function getAuthorizedOfferSnapshot(
     briefId,
     matchingRevision: brief.revision,
     briefStatus: brief.status,
+    sourcePhotoNeedsReplacement: rows.some(
+      (row) => row.status === "failed" && row.normalizedErrorCode === "invalid_source",
+    ),
     offers: signedOffers,
   };
 }

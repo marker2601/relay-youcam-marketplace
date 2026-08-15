@@ -153,7 +153,6 @@ export const eventBriefs = pgTable(
     styleTags: jsonb("style_tags").$type<string[]>().notNull(),
     exclusions: jsonb("exclusions").$type<string[]>().notNull(),
     shopperMediaId: uuid("shopper_media_id")
-      .notNull()
       .unique()
       .references(() => mediaObjects.id, { onDelete: "restrict" }),
     photoConsentAt: timestamp("photo_consent_at", { withTimezone: true }).notNull(),

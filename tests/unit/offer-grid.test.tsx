@@ -45,8 +45,10 @@ function snapshot(
       explanations: ["Measurements align", "Within budget", "Preferred color"],
       originalImageUrl: `https://relay.test/original-${index}`,
       resultImageUrl: status === "ready" ? `https://relay.test/result-${index}` : null,
+      failureGuidance: status === "failed" ? "listing_image" : null,
       expiresAt: "2026-08-16T12:00:00.000Z",
     })),
+    sourcePhotoNeedsReplacement: false,
   } as OfferSnapshot;
 }
 
@@ -81,6 +83,7 @@ describe("OfferGrid", () => {
 
     expect(within(cards[0]!).getByRole("button", { name: /request emerald satin midi/i })).toBeVisible();
     expect(within(cards[1]!).getByText("Preview unavailable—garment can still be reviewed")).toBeVisible();
+    expect(within(cards[1]!).getByText(/provider needs to replace this listing image/i)).toBeVisible();
     expect(within(cards[2]!).getByText("Preparing your preview")) .toBeVisible();
   });
 
@@ -136,5 +139,25 @@ describe("OfferProgress", () => {
     expect(processOffers).toHaveBeenCalledOnce();
     expect(screen.getByRole("status")).toHaveTextContent("All 3 previews are ready.");
     expect(container.querySelector("[data-offer-progress]")).toBe(shell);
+  });
+
+  it("offers photo replacement without asking for event details again", () => {
+    const invalidSource = {
+      ...snapshot(["failed", "failed", "failed"]),
+      sourcePhotoNeedsReplacement: true,
+    };
+    render(
+      <OfferProgress
+        initialSnapshot={invalidSource}
+        initialRefinement={brief}
+        processOffers={vi.fn()}
+        refreshOffers={vi.fn()}
+        refineBrief={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: /replace your photo/i })).toBeVisible();
+    expect(screen.getByLabelText("Replacement full-body photo")).toBeVisible();
+    expect(screen.queryByLabelText("Event date")).not.toBeInTheDocument();
   });
 });

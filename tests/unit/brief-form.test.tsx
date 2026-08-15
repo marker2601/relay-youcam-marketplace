@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  BriefDeletionControl,
   BriefForm,
   BriefSubmissionError,
   type SubmitBrief,
@@ -104,5 +105,30 @@ describe("BriefForm", () => {
     await user.click(screen.getByRole("button", { name: "Find my matches" }));
 
     expect(onCreated).toHaveBeenCalledWith("11111111-1111-4111-8111-111111111111");
+  });
+});
+
+describe("BriefDeletionControl", () => {
+  it("requires explicit confirmation and shows the upstream-retention distinction", async () => {
+    const user = userEvent.setup();
+    const deleteBrief = vi.fn().mockResolvedValue({
+      status: "deleted" as const,
+      message:
+        "Relay has deleted its stored copies. Perfect Corp. may retain API files for up to 30 days under its documented policy.",
+    });
+    render(
+      <BriefDeletionControl
+        briefId="11111111-1111-4111-8111-111111111111"
+        deleteBrief={deleteBrief}
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "Delete my Relay images" });
+    expect(button).toBeDisabled();
+    await user.click(screen.getByLabelText(/delete my uploaded photo and generated previews/i));
+    await user.click(button);
+
+    expect(deleteBrief).toHaveBeenCalledOnce();
+    expect(await screen.findByRole("status")).toHaveTextContent("up to 30 days");
   });
 });

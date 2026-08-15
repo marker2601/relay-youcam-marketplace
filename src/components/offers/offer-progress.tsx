@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  BriefDeletionControl,
+  BriefPhotoReplacement,
+  type ReplaceBriefPhoto,
+} from "@/components/brief/brief-form";
+import {
   OfferGrid,
   type BriefRefinement,
   type RefineBriefCommand,
@@ -58,6 +63,7 @@ interface OfferProgressProps {
   refineBrief?: RefineCommand;
   minimumPollDelayMs?: number;
   pollingDeadlineMs?: number;
+  replacePhoto?: ReplaceBriefPhoto;
 }
 
 export function OfferProgress({
@@ -68,6 +74,7 @@ export function OfferProgress({
   refineBrief = defaultRefineBrief,
   minimumPollDelayMs = 2_000,
   pollingDeadlineMs = 6 * 60_000,
+  replacePhoto,
 }: OfferProgressProps) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [refinement, setRefinement] = useState(initialRefinement);
@@ -122,6 +129,14 @@ export function OfferProgress({
     void refreshSignedUrls();
   }
 
+  async function handlePhotoReplaced() {
+    setSnapshot(await refreshOffers(snapshot.briefId));
+    setGenerationError(null);
+    setDeadlineReached(false);
+    setPollDelay(minimumPollDelayMs);
+    startedAt.current = Date.now();
+  }
+
   return (
     <section className="offer-progress" data-offer-progress>
       <div className="offer-progress__intro">
@@ -143,12 +158,20 @@ export function OfferProgress({
           <button type="button" onClick={retry}>Retry updates</button>
         </div>
       )}
+      {snapshot.sourcePhotoNeedsReplacement && (
+        <BriefPhotoReplacement
+          briefId={snapshot.briefId}
+          replacePhoto={replacePhoto}
+          onReplaced={handlePhotoReplaced}
+        />
+      )}
       <OfferGrid
         snapshot={snapshot}
         refinement={refinement}
         onRefine={handleRefine}
         onImageExpired={refreshSignedUrls}
       />
+      <BriefDeletionControl briefId={snapshot.briefId} />
     </section>
   );
 }

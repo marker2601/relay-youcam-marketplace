@@ -121,6 +121,10 @@ describe("authorized offer read model", () => {
       encodeURIComponent(`briefs/${briefId}/results/ready.jpg`),
     );
     expect(store.signedKeys).toHaveLength(4);
+    expect(snapshot.sourcePhotoNeedsReplacement).toBe(false);
+    expect(snapshot.offers.find((offer) => offer.status === "failed")?.failureGuidance).toBe(
+      "listing_image",
+    );
     expect(JSON.stringify(snapshot)).not.toContain("invalid_reference");
     expect(JSON.stringify(snapshot)).not.toContain("objectKey");
     expect(JSON.stringify(snapshot)).not.toContain("youcam");
@@ -138,5 +142,21 @@ describe("authorized offer read model", () => {
       ),
     ).rejects.toMatchObject({ name: "NotFoundError" });
     expect(store.signedKeys).toEqual([]);
+  });
+
+  it("returns only a safe photo-replacement signal for invalid shopper sources", async () => {
+    await testDb
+      .update(tryOnJobs)
+      .set({ normalizedErrorCode: "invalid_source" })
+      .where(eq(tryOnJobs.status, "failed"));
+    const snapshot = await getAuthorizedOfferSnapshot(
+      testDb,
+      { userId: seedIds.shopper, role: "shopper" },
+      briefId,
+      new RecordingObjectStore(),
+    );
+
+    expect(snapshot.sourcePhotoNeedsReplacement).toBe(true);
+    expect(JSON.stringify(snapshot)).not.toContain("invalid_source");
   });
 });

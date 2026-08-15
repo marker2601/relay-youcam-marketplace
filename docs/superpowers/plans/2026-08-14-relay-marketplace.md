@@ -534,16 +534,16 @@ npm run db:seed
 - Test: `tests/integration/privacy.test.ts`
 - Test: `tests/integration/failure-recovery.test.ts`
 
-- [ ] Add failing deletion tests for an owned brief with source plus two generated results. Assert database media references are nulled, every Relay object is deleted, signed reads stop working, offers retain non-image audit status, and an unauthorized actor changes nothing.
-- [ ] Add failure tests for invalid source, invalid reference, 429, 503, timeout, malformed 200, engine error, expired result URL, duplicate poll, and the six-minute deadline.
-- [ ] Run the two focused integration files and confirm the new cases fail.
-- [ ] Implement `DELETE /api/briefs/[briefId]` as owner-only and idempotent. First mark the brief `deleting` and clear usable media references transactionally; then best-effort delete objects; persist deletion completion/errors for safe retry.
-- [ ] Return deletion copy that distinguishes Relay deletion from upstream retention: `Relay has deleted its stored copies. Perfect Corp. may retain API files for up to 30 days under its documented policy.`
-- [ ] Implement a single HTTP error mapper for validation 400, unauthenticated 401, not-found/unauthorized 404, conflict 409, request-too-large 413, rate-limited 429, and unexpected 500. Each response includes a safe stable code and request ID, never stack trace or upstream body.
-- [ ] Finish orchestrator and UI error behavior: invalid source exposes the existing photo-only replacement control with all brief fields preserved; invalid reference flags only the provider listing with image guidance; retryable errors preserve the external task; permanent errors fail only the affected offer; deadline expiry stops polling and enables manual retry.
-- [ ] Add idempotency pruning for command keys older than seven days and a maximum of three concurrent YouCam actions per brief, remaining below the documented 250 requests/300 seconds limit.
-- [ ] Run focused tests, full integration suite, and inspect logs from the failure run for secrets, URLs, source bytes, or measurement values.
-- [ ] Commit: `feat: add privacy deletion and resilient failures`
+- [x] Add failing deletion tests for an owned brief with source plus two generated results. Assert database media references are nulled, every Relay object is deleted, signed reads stop working, offers retain non-image audit status, and an unauthorized actor changes nothing.
+- [x] Add failure tests for invalid source, invalid reference, 429, 503, timeout, malformed 200, engine error, expired result URL, duplicate poll, and the six-minute deadline.
+- [x] Run the two focused integration files and confirm the new cases fail.
+- [x] Implement `DELETE /api/briefs/[briefId]` as owner-only and idempotent. First mark the brief `deleting` and clear usable media references transactionally; then best-effort delete objects; persist deletion completion/errors for safe retry.
+- [x] Return deletion copy that distinguishes Relay deletion from upstream retention: `Relay has deleted its stored copies. Perfect Corp. may retain API files for up to 30 days under its documented policy.`
+- [x] Implement a single HTTP error mapper for validation 400, unauthenticated 401, not-found/unauthorized 404, conflict 409, request-too-large 413, rate-limited 429, and unexpected 500. Each response includes a safe stable code and request ID, never stack trace or upstream body.
+- [x] Finish orchestrator and UI error behavior: invalid source exposes the existing photo-only replacement control with all brief fields preserved; invalid reference flags only the provider listing with image guidance; retryable errors preserve the external task; permanent errors fail only the affected offer; deadline expiry stops polling and enables manual retry.
+- [x] Add idempotency pruning for command keys older than seven days and a maximum of three concurrent YouCam actions per brief, remaining below the documented 250 requests/300 seconds limit.
+- [x] Run focused tests, full integration suite, and inspect logs from the failure run for secrets, URLs, source bytes, or measurement values.
+- [x] Commit: `feat: add privacy deletion and resilient failures`
 
 ## Task 15: Polish the judged experience and prove it end to end
 
