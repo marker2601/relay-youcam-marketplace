@@ -291,13 +291,13 @@ npm run db:seed
 - Create: `src/lib/domain/matching.ts`
 - Test: `tests/unit/matching.test.ts`
 
-- [ ] Define `MatchInput` with a normalized brief and candidate listings enriched with `distanceMiles`; define `RankedMatch` with integer basis-point `score`, a six-part breakdown, and ordered explanation strings.
-- [ ] Write failing table tests for every hard filter: inactive listing, unavailable event window, category mismatch, over-budget price, out-of-radius distance, and a missing required garment measurement.
-- [ ] Write failing ranking tests that lock the weights at measurement 3500, event/dress code 2500, style/color 1500, price 1000, provider reliability 1000, and distance 500 basis points; include a stable listing-ID tiebreaker and a maximum of three results.
-- [ ] Run `npm run test:unit -- tests/unit/matching.test.ts` and confirm the hard-filter and score assertions fail.
-- [ ] Implement pure helpers `passesHardFilters`, `measurementScore`, `tagScore`, `priceScore`, `distanceScore`, and `rankMatches`. For full-body items require bust, waist, and hips for compatibility and length for shopper display; accept each garment circumference between the corresponding body circumference + 20 and + 120 tenths-cm; score proximity to 60 tenths-cm ease.
-- [ ] Lock the normalized component formulas: measurement is the average of `clamp(1 - abs(ease - 60) / 60)`; event/dress is 70% dress-tag coverage plus 30% event-tag coverage; color/style is the average of each preference-coverage score and defaults to 1 only when that preference list is empty; price is `clamp(1 - (price - minBudget) / max(1, maxBudget - minBudget))`; reliability is basis points / 10000; distance is `clamp(1 - distance / min(briefRadius, serviceRadius))`.
-- [ ] Define explicit compatible tags: `cocktail -> [cocktail, polished]`, `formal -> [formal, black_tie]`, `semi_formal -> [semi_formal, polished]`, `festive -> [festive, statement]`; map the four event types to their same-named event tag. Unknown tags receive no compatibility credit but never trigger a hard filter.
+- [x] Define `MatchInput` with a normalized brief and candidate listings enriched with `distanceMiles`; define `RankedMatch` with integer basis-point `score`, a six-part breakdown, and ordered explanation strings.
+- [x] Write failing table tests for every hard filter: inactive listing, unavailable event window, category mismatch, over-budget price, out-of-radius distance, and a missing required garment measurement.
+- [x] Write failing ranking tests that lock the weights at measurement 3500, event/dress code 2500, style/color 1500, price 1000, provider reliability 1000, and distance 500 basis points; include a stable listing-ID tiebreaker and a maximum of three results.
+- [x] Run `npm run test:unit -- tests/unit/matching.test.ts` and confirm the hard-filter and score assertions fail.
+- [x] Implement pure helpers `passesHardFilters`, `measurementScore`, `tagScore`, `priceScore`, `distanceScore`, and `rankMatches`. For full-body items require bust, waist, and hips for compatibility and length for shopper display; accept each garment circumference between the corresponding body circumference + 20 and + 120 tenths-cm; score proximity to 60 tenths-cm ease.
+- [x] Lock the normalized component formulas: measurement is the average of `clamp(1 - abs(ease - 60) / 60)`; event/dress is 70% dress-tag coverage plus 30% event-tag coverage; color/style is the average of each preference-coverage score and defaults to 1 only when that preference list is empty; price is `clamp(1 - (price - minBudget) / max(1, maxBudget - minBudget))`; reliability is basis points / 10000; distance is `clamp(1 - distance / min(briefRadius, serviceRadius))`.
+- [x] Define explicit compatible tags: `cocktail -> [cocktail, polished]`, `formal -> [formal, black_tie]`, `semi_formal -> [semi_formal, polished]`, `festive -> [festive, statement]`; map the four event types to their same-named event tag. Unknown tags receive no compatibility credit but never trigger a hard filter.
 
   ```ts
   export function rankMatches(input: MatchInput): RankedMatch[] {
@@ -309,10 +309,10 @@ npm run db:seed
   }
   ```
 
-- [ ] Generate explanations only from deterministic facts, for example `Measurements allow 4-8 cm ease`, `Matches formal dress code`, and `$18 below your maximum`; never say `perfect fit` or infer body type.
-- [ ] Add property-style loops covering 100 generated candidates to prove scores remain 0–10000, changing input order does not change output order, and a lower reliability score cannot increase the reliability component.
-- [ ] Run the focused test and `npm run typecheck`; confirm all pass.
-- [ ] Commit: `feat: add explainable top-three matching`
+- [x] Generate explanations only from deterministic facts, for example `Measurements allow 4-8 cm ease`, `Matches formal dress code`, and `$18 below your maximum`; never say `perfect fit` or infer body type.
+- [x] Add property-style loops covering 100 generated candidates to prove scores remain 0–10000, changing input order does not change output order, and a lower reliability score cannot increase the reliability component.
+- [x] Run the focused test and `npm run typecheck`; confirm all pass.
+- [x] Commit: `feat: add explainable top-three matching`
 
 ## Task 6: Guard offer, reservation, and retry state changes
 
