@@ -1,6 +1,6 @@
 # Relay Marketplace Design
 
-**Status:** Approved concept, implementation planning pending written-spec review  
+**Status:** Approved for implementation planning
 **Date:** August 14, 2026  
 **Working product name:** Relay  
 **Tagline:** Post the event. See yourself in the options. Rent the winner.
