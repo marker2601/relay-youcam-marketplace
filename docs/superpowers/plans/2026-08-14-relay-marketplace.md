@@ -577,16 +577,16 @@ npm run db:seed
 - Create: `.github/workflows/ci.yml`
 - Test: production deployment and manual real-API smoke test
 
-- [ ] Write `README.md` with product thesis, architecture diagram, prerequisites, exact local setup, Docker startup, migrations/seeding, fake/live YouCam modes, test commands, privacy model, limitations, deployment variables, and troubleshooting for photo/rate-limit failures.
-- [ ] Add CI on pull requests and pushes: `npm ci`, typecheck, lint, unit/contract tests, PostgreSQL-backed integration tests, production build, then Playwright with the fake adapter. Upload Playwright traces only on failure and ensure fixtures contain no personal image.
+- [x] Write `README.md` with product thesis, architecture diagram, prerequisites, exact local setup, Docker startup, migrations/seeding, fake/live YouCam modes, test commands, privacy model, limitations, deployment variables, and troubleshooting for photo/rate-limit failures.
+- [x] Add CI on pull requests and pushes: `npm ci`, typecheck, lint, unit/contract tests, PostgreSQL-backed integration tests, production build, then Playwright with the fake adapter. Upload Playwright traces only on failure and ensure fixtures contain no personal image.
 - [ ] Provision a production PostgreSQL database and private S3-compatible bucket; set all `.env.example` variables in the host; use a new 32+ byte session secret; set `DEMO_MODE=true`, `YOUCAM_MODE=live`, `APP_TIME_ZONE=America/Chicago`; never prefix server secrets with `NEXT_PUBLIC_`.
 - [ ] Deploy to Vercel, run migrations once, run the idempotent seed once, and verify anonymous access to object storage returns denied. Configure the public deployment URL in Playwright's smoke target.
 - [ ] With a consented, non-sensitive test image and the real key, perform one full Clothes v3 run. Confirm file registration, presigned PUT, task creation, bounded status polling, private result copy, ready offer, reservation request, provider acceptance, fresh signed Relay URL, and source/result deletion.
 - [ ] Record measured latency, task ID suffix, result status, and normalized errors in `release-checklist.md`; do not record full task ID, signed URL, image, API key, or measurement profile.
-- [ ] Draft `demo-script.md` to fit 1–3 minutes: 0:00 problem/market, 0:15 shopper brief, 0:40 explainable matches and real VTO, 1:15 reservation request, 1:35 provider acceptance, 1:55 confirmed timeline, 2:10 18% commission hypothesis/impact, 2:30 trust/limits/close.
-- [ ] Draft `devpost-copy.md` with title/tagline, problem, solution, how built, YouCam integration, two-sided business model, potential impact, challenges, accomplishments, lessons, next steps, repository/test instructions, and explicit deferred features. Do not claim guaranteed fit, return reduction, environmental reduction, or live marketplace supply.
+- [x] Draft `demo-script.md` to fit 1–3 minutes: 0:00 problem/market, 0:15 shopper brief, 0:40 explainable matches and real VTO, 1:15 reservation request, 1:35 provider acceptance, 1:55 confirmed timeline, 2:10 18% commission hypothesis/impact, 2:30 trust/limits/close.
+- [x] Draft `devpost-copy.md` with title/tagline, problem, solution, how built, YouCam integration, two-sided business model, potential impact, challenges, accomplishments, lessons, next steps, repository/test instructions, and explicit deferred features. Do not claim guaranteed fit, return reduction, environmental reduction, or live marketplace supply.
 - [ ] Capture desktop and mobile screenshots of the real result, comparison, provider request, and confirmed timeline; create a public 1–3 minute video; verify repository visibility and working demo access in an incognito browser.
-- [ ] Run the release gate from a clean install:
+- [x] Run the release gate from a clean install:
 
   ```bash
   npm ci
@@ -598,8 +598,8 @@ npm run db:seed
   npm run test:e2e
   ```
 
-- [ ] Check the deployed flow against all four equally weighted judging criteria: technological implementation, design, potential impact, and quality of idea. Record pass/fail evidence in `release-checklist.md`.
-- [ ] Commit: `docs: prepare Relay release and Devpost submission`
+- [x] Check the deployment candidate against all four equally weighted judging criteria: technological implementation, design, potential impact, and quality of idea. Record pass/fail evidence in `release-checklist.md`; technological implementation remains conditional on the real-key smoke test.
+- [x] Commit: `docs: prepare Relay release and Devpost submission`
 
 ---
 

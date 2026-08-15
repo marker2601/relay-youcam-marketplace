@@ -1,0 +1,88 @@
+name: Relay CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: relay-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      APP_TIME_ZONE: America/Chicago
+      DATABASE_URL: postgresql://relay:relay_local@localhost:54329/relay
+      TEST_DATABASE_URL: postgresql://relay:relay_local@localhost:54329/relay_test
+      SESSION_SECRET: relay-ci-session-secret-at-least-32-characters
+      S3_ENDPOINT: http://localhost:59000
+      S3_REGION: us-east-1
+      S3_BUCKET: relay-media
+      S3_ACCESS_KEY_ID: relay_local
+      S3_SECRET_ACCESS_KEY: relay_local_secret
+      S3_FORCE_PATH_STYLE: "true"
+      DEMO_MODE: "true"
+      YOUCAM_MODE: fake
+      YOUCAM_BASE_URL: https://yce-api-01.makeupar.com
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start private data services
+        run: |
+          docker compose up -d --wait db minio
+          docker compose run --rm minio-init
+
+      - name: Migrate and seed
+        run: |
+          npm run db:migrate
+          npm run db:seed
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit and contract tests
+        run: npm run test:unit
+
+      - name: PostgreSQL integration tests
+        run: npm run test:integration
+
+      - name: Production build
+        run: npm run build
+
+      - name: Chromium desktop and mobile E2E
+        run: npm run test:e2e
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-${{ github.run_id }}
+          path: test-results/**/trace.zip
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Stop test services
+        if: always()
+        run: docker compose down -v
