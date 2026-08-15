@@ -323,14 +323,14 @@ npm run db:seed
 - Test: `tests/unit/state-machines.test.ts`
 - Test: `tests/unit/retry-policy.test.ts`
 
-- [ ] Write failing transition tables for every allowed offer transition: `matched -> generating|expired`, `generating -> ready|failed|expired`, `ready -> reservation_requested|expired`, `reservation_requested -> accepted|declined`, and no transition out of `accepted|declined|expired|failed`.
-- [ ] Write failing reservation transition tables for `requested -> confirmed|cancelled`, then model but do not expose `confirmed -> ready_for_pickup -> in_use -> returned` and cancellation before `in_use`.
-- [ ] Run the two focused unit files and confirm they fail because the guard functions do not exist.
-- [ ] Implement `transitionOffer(current, next)` and `transitionReservation(current, next)` as pure functions returning the next state or throwing a typed `InvalidTransitionError` that contains states but no entity data.
-- [ ] Write retry-policy tests for HTTP 429, 500–599, network timeout, engine error, invalid input, attempt cap, and bounded jitter. Inject the random value so expected delays are deterministic.
-- [ ] Implement `classifyYouCamFailure` and `nextPollAt`. Use base delays `[2, 4, 8, 16, 30, 45]` seconds, at most 12 polls, ±20% jitter, and a hard 6-minute job deadline. Never create a new external task after `externalTaskId` exists.
-- [ ] Run both focused test files and `npm run typecheck`; confirm all pass.
-- [ ] Commit: `feat: guard marketplace and retry state transitions`
+- [x] Write failing transition tables for every allowed offer transition: `matched -> generating|expired`, `generating -> ready|failed|expired`, `ready -> reservation_requested|expired`, `reservation_requested -> accepted|declined`, and no transition out of `accepted|declined|expired|failed`.
+- [x] Write failing reservation transition tables for `requested -> confirmed|cancelled`, then model but do not expose `confirmed -> ready_for_pickup -> in_use -> returned` and cancellation before `in_use`.
+- [x] Run the two focused unit files and confirm they fail because the guard functions do not exist.
+- [x] Implement `transitionOffer(current, next)` and `transitionReservation(current, next)` as pure functions returning the next state or throwing a typed `InvalidTransitionError` that contains states but no entity data.
+- [x] Write retry-policy tests for HTTP 429, 500–599, network timeout, engine error, invalid input, attempt cap, and bounded jitter. Inject the random value so expected delays are deterministic.
+- [x] Implement `classifyYouCamFailure` and `nextPollAt`. Use base delays `[2, 4, 8, 16, 30, 45]` seconds, at most 12 polls, ±20% jitter, and a hard 6-minute job deadline. Never create a new external task after `externalTaskId` exists.
+- [x] Run both focused test files and `npm run typecheck`; confirm all pass.
+- [x] Commit: `feat: guard marketplace and retry state transitions`
 
 ## Task 7: Validate and privately store image media
 
