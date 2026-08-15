@@ -247,10 +247,10 @@ npm run db:seed
 - Create: `drizzle/0000_relay_core.sql` via Drizzle
 - Test: `tests/integration/database-invariants.test.ts`
 
-- [ ] Add PostgreSQL and MinIO services to `docker-compose.yml`, with named volumes, health checks, explicit local-only credentials, PostgreSQL port `54329`, MinIO API port `9000`, and MinIO console port `9001`. Mount `scripts/create-test-db.sql` into PostgreSQL initialization to create a separate `relay_test` database, and use a one-shot MinIO initializer to create a non-public `relay-media` bucket.
-- [ ] Define Drizzle enums and tables for `users`, `event_briefs`, `listings`, `matches`, `try_on_jobs`, `offers`, `reservations`, `media_objects`, and `idempotency_keys`. Use UUID primary keys, JSONB only for measurement/tag/breakdown structures, `integer` cents/tenths, and `timestamp with time zone` timestamps. Store `shopper_media_id`, `garment_media_id`, and `result_media_id` foreign keys instead of exposing storage keys from core records. A try-on job also stores nullable `source_file_id` and `reference_file_id` so every external upload phase can resume without duplication. Store `brief_id` on reservations for transaction-level uniqueness.
-- [ ] Add `matching_revision integer default 1` to briefs, `version integer default 1` to listings, and both `brief_revision` and `listing_version` to matches. Add database constraints: non-negative cents; min budget <= max; scores 0–10000 basis points; reliability 0–10000; one match per brief/revision/listing-version; one try-on job per match; one offer per match; one reservation per offer; one non-cancelled reservation per brief; unique non-null YouCam `external_task_id`; one idempotency value per actor/scope/key; and exactly one owning resource for each media record.
-- [ ] Start local services and generate the migration:
+- [x] Add PostgreSQL and MinIO services to `docker-compose.yml`, with named volumes, health checks, explicit local-only credentials, PostgreSQL port `54329`, MinIO API host port `59000`, and MinIO console host port `59001`. Mount `scripts/create-test-db.sql` into PostgreSQL initialization to create a separate `relay_test` database, and use a one-shot MinIO initializer to create a non-public `relay-media` bucket.
+- [x] Define Drizzle enums and tables for `users`, `event_briefs`, `listings`, `matches`, `try_on_jobs`, `offers`, `reservations`, `media_objects`, and `idempotency_keys`. Use UUID primary keys, JSONB only for measurement/tag/breakdown structures, `integer` cents/tenths, and `timestamp with time zone` timestamps. Store `shopper_media_id`, `garment_media_id`, and `result_media_id` foreign keys instead of exposing storage keys from core records. A try-on job also stores nullable `source_file_id` and `reference_file_id` so every external upload phase can resume without duplication. Store `brief_id` on reservations for transaction-level uniqueness.
+- [x] Add `matching_revision integer default 1` to briefs, `version integer default 1` to listings, and both `brief_revision` and `listing_version` to matches. Add database constraints: non-negative cents; min budget <= max; scores 0–10000 basis points; reliability 0–10000; one match per brief/revision/listing-version; one try-on job per match; one offer per match; one reservation per offer; one non-cancelled reservation per brief; unique non-null YouCam `external_task_id`; one idempotency value per actor/scope/key; and exactly one owning resource for each media record.
+- [x] Start local services and generate the migration:
 
   ```bash
   docker compose up -d db minio
@@ -258,11 +258,11 @@ npm run db:seed
   npm run db:migrate
   ```
 
-- [ ] Create `tests/helpers/test-db.ts` to require a `TEST_DATABASE_URL` whose database name ends in `_test`, run committed migrations, and truncate only the allowlisted Relay tables between tests. Write integration tests that insert a valid graph, then prove duplicate matches, duplicate active brief reservations, negative prices, and invalid scores are rejected by PostgreSQL.
-- [ ] Run `npm run test:integration -- tests/integration/database-invariants.test.ts` and confirm it fails until every constraint is present.
-- [ ] Finish schema constraints and add indexes on `event_briefs(shopper_id, created_at)`, `listings(status, garment_category)`, `try_on_jobs(status, next_poll_at)`, `reservations(provider_id, status)`, `media_objects(owner_user_id, deleted_at)`, and `idempotency_keys(created_at)`.
-- [ ] Rerun the focused test, inspect `drizzle/0000_relay_core.sql`, and confirm it can apply to a fresh test database.
-- [ ] Commit: `feat: add Relay database schema and invariants`
+- [x] Create `tests/helpers/test-db.ts` to require a `TEST_DATABASE_URL` whose database name ends in `_test`, run committed migrations, and truncate only the allowlisted Relay tables between tests. Write integration tests that insert a valid graph, then prove duplicate matches, duplicate active brief reservations, negative prices, and invalid scores are rejected by PostgreSQL.
+- [x] Run `npm run test:integration -- tests/integration/database-invariants.test.ts` and confirm it fails until every constraint is present.
+- [x] Finish schema constraints and add indexes on `event_briefs(shopper_id, created_at)`, `listings(status, garment_category)`, `try_on_jobs(status, next_poll_at)`, `reservations(provider_id, status)`, `media_objects(owner_user_id, deleted_at)`, and `idempotency_keys(created_at)`.
+- [x] Rerun the focused test, inspect `drizzle/0000_relay_core.sql`, and confirm it can apply to a fresh test database.
+- [x] Commit: `feat: add Relay database schema and invariants`
 
 ## Task 4: Seed the fictional two-sided launch market
 
