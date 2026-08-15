@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --paper: #f7f3ec;
+  --ink: #14251c;
+  --relay: #176b51;
+  --line: #cfc8ba;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.home-shell {
+  display: grid;
+  min-height: 100vh;
+  align-content: center;
+  gap: 1.5rem;
+  max-width: 64rem;
+  padding: clamp(1.5rem, 6vw, 6rem);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--relay);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+h1 {
+  max-width: 18ch;
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.8rem, 8vw, 6.5rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+}
+
+.lede {
+  max-width: 46rem;
+  margin: 0;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  line-height: 1.6;
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.home-actions a {
+  min-height: 2.75rem;
+  padding: 0.8rem 1.1rem;
+  border: 1px solid var(--relay);
+  border-radius: 999px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.primary-action {
+  background: var(--relay);
+  color: white;
+}
+
+.secondary-action {
+  color: var(--relay);
+}
+
+.home-actions a:focus-visible {
+  outline: 3px solid #d75f4a;
+  outline-offset: 3px;
+}

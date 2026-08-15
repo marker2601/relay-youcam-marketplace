@@ -142,7 +142,7 @@ npm run db:seed
 - Create: `.env.example`
 - Test: `tests/unit/env.test.ts`
 
-- [ ] Initialize and install runtime dependencies:
+- [x] Initialize and install runtime dependencies:
 
   ```bash
   npm init -y
@@ -150,7 +150,7 @@ npm run db:seed
   npm install -D typescript @types/node @types/react @types/react-dom tailwindcss @tailwindcss/postcss eslint eslint-config-next vitest @vitest/coverage-v8 jsdom @testing-library/react @testing-library/jest-dom @testing-library/user-event msw playwright @playwright/test drizzle-kit tsx dotenv
   ```
 
-- [ ] Add these exact scripts to `package.json`:
+- [x] Add these exact scripts to `package.json`:
 
   ```json
   {
@@ -170,9 +170,9 @@ npm run db:seed
     }
   }
   ```
-- [ ] Write `tests/unit/env.test.ts` to prove that missing `DATABASE_URL`, `SESSION_SECRET`, storage settings, and—when `YOUCAM_MODE=live`—`YOUCAM_API_KEY` produce field-specific validation errors.
-- [ ] Run `npm run test:unit -- tests/unit/env.test.ts` and confirm it fails because `src/lib/config/env.ts` does not exist.
-- [ ] Create `src/lib/config/env.ts` with separate `serverEnvSchema` and `publicEnvSchema`; export a lazy `getServerEnv(source = process.env)` so importing UI modules never evaluates secrets during build.
+- [x] Write `tests/unit/env.test.ts` to prove that missing `DATABASE_URL`, `SESSION_SECRET`, storage settings, and—when `YOUCAM_MODE=live`—`YOUCAM_API_KEY` produce field-specific validation errors.
+- [x] Run `npm run test:unit -- tests/unit/env.test.ts` and confirm it fails because `src/lib/config/env.ts` does not exist.
+- [x] Create `src/lib/config/env.ts` with separate `serverEnvSchema` and `publicEnvSchema`; export a lazy `getServerEnv(source = process.env)` so importing UI modules never evaluates secrets during build.
 
   ```ts
   const base = z.object({
@@ -199,10 +199,10 @@ npm run db:seed
   }
   ```
 
-- [ ] Configure strict TypeScript (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`), Vitest aliases/setup, Playwright `webServer`, Tailwind, and a minimal accessible home page with `Shop as a guest` and `Supply your closet` links.
-- [ ] Copy every required variable—with safe example values and comments—into `.env.example`; include separate `DATABASE_URL` and `TEST_DATABASE_URL` values, `APP_TIME_ZONE=America/Chicago`, `DEMO_MODE=true`, `YOUCAM_MODE=fake`, and no usable secret.
-- [ ] Run `npm run typecheck`, `npm run lint`, and the focused env test; confirm all pass.
-- [ ] Commit: `chore: bootstrap Relay application and test harness`
+- [x] Configure strict TypeScript (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`), Vitest aliases/setup, Playwright `webServer`, Tailwind, and a minimal accessible home page with `Shop as a guest` and `Supply your closet` links.
+- [x] Copy every required variable—with safe example values and comments—into `.env.example`; include separate `DATABASE_URL` and `TEST_DATABASE_URL` values, `APP_TIME_ZONE=America/Chicago`, `DEMO_MODE=true`, `YOUCAM_MODE=fake`, and no usable secret.
+- [x] Run `npm run typecheck`, `npm run lint`, and the focused env test; confirm all pass.
+- [x] Commit: `chore: bootstrap Relay application and test harness`
 
 ## Task 2: Define the domain contracts and command validation
 
