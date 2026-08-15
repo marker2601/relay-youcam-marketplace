@@ -434,15 +434,15 @@ npm run db:seed
 - Test: `tests/unit/demo-session.test.ts`
 - Test: `tests/integration/authorization.test.ts`
 
-- [ ] Write failing tests for a valid HMAC-signed session, tampered user/role/expiry values, expiration, unknown seeded user, and cookie attributes `HttpOnly`, `SameSite=Lax`, `Secure` in production, and `Path=/`.
-- [ ] Run `npm run test:unit -- tests/unit/demo-session.test.ts` and confirm it fails.
-- [ ] Implement `createDemoSession` and `readDemoSession` with Node `crypto.createHmac("sha256", SESSION_SECRET)`, constant-time signature comparison, a one-hour expiry, and a payload containing only `userId`, `role`, and `expiresAt`.
-- [ ] Implement `POST /api/demo/session` accepting a seeded `userId`, verifying its role from PostgreSQL, issuing the cookie, and redirecting shoppers to `/request/new` or providers to `/provider`. Return 404 for arbitrary IDs.
-- [ ] Create repository methods for owner-scoped brief reads/deletes and provider-scoped listing/request reads. Require an `Actor` parameter in every method instead of relying on callers to remember a filter.
-- [ ] Write integration tests proving shopper A cannot read or delete shopper B's brief, a shopper cannot create a listing, provider A cannot mutate provider B's listing/request, and providers never receive `shopperMediaId` or `measurementProfile`.
-- [ ] Implement authorization in the repository query itself; return `NotFound` for both missing and unauthorized resources so ID enumeration does not reveal existence.
-- [ ] Run both focused test files and lint; confirm all pass.
-- [ ] Commit: `feat: add authorized demo marketplace sessions`
+- [x] Write failing tests for a valid HMAC-signed session, tampered user/role/expiry values, expiration, unknown seeded user, and cookie attributes `HttpOnly`, `SameSite=Lax`, `Secure` in production, and `Path=/`.
+- [x] Run `npm run test:unit -- tests/unit/demo-session.test.ts` and confirm it fails.
+- [x] Implement `createDemoSession` and `readDemoSession` with Node `crypto.createHmac("sha256", SESSION_SECRET)`, constant-time signature comparison, a one-hour expiry, and a payload containing only `userId`, `role`, and `expiresAt`.
+- [x] Implement `POST /api/demo/session` accepting a seeded `userId`, verifying its role from PostgreSQL, issuing the cookie, and redirecting shoppers to `/request/new` or providers to `/provider`. Return 404 for arbitrary IDs.
+- [x] Create repository methods for owner-scoped brief reads/deletes and provider-scoped listing/request reads. Require an `Actor` parameter in every method instead of relying on callers to remember a filter.
+- [x] Write integration tests proving shopper A cannot read or delete shopper B's brief, a shopper cannot create a listing, provider A cannot mutate provider B's listing/request, and providers never receive `shopperMediaId` or `measurementProfile`.
+- [x] Implement authorization in the repository query itself; return `NotFound` for both missing and unauthorized resources so ID enumeration does not reveal existence.
+- [x] Run both focused test files and lint; confirm all pass.
+- [x] Commit: `feat: add authorized demo marketplace sessions`
 
 ## Task 11: Build the shopper brief API and recoverable form
 

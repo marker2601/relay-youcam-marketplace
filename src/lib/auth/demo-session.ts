@@ -4,9 +4,12 @@ import type { DemoRole } from "@/lib/domain/contracts";
 
 export const demoSessionCookieName = "relay_demo_session";
 
-export interface DemoSession {
+export interface Actor {
   userId: string;
   role: DemoRole;
+}
+
+export interface DemoSession extends Actor {
   expiresAt: number;
 }
 
@@ -110,4 +113,18 @@ export function sessionTokenFromCookieHeader(cookieHeader: string | null): strin
     }
   }
   return undefined;
+}
+
+export function serializeDemoSessionCookie(token: string, production: boolean): string {
+  const attributes = [
+    `${demoSessionCookieName}=${encodeURIComponent(token)}`,
+    "Max-Age=3600",
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+  ];
+  if (production) {
+    attributes.push("Secure");
+  }
+  return attributes.join("; ");
 }
