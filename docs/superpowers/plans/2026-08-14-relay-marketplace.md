@@ -344,7 +344,7 @@ npm run db:seed
 - Test: `tests/integration/privacy.test.ts`
 - Fixture: `tests/fixtures/images/{valid-portrait.jpg,too-small.png,wrong-type.gif}`
 
-- [ ] Define `ObjectStore` with `putPrivate`, `getPrivate`, `delete`, and `createReadUrl`; its return values use opaque keys that are never serialized by API response schemas.
+- [x] Define `ObjectStore` with `putPrivate`, `getPrivate`, `delete`, and `createReadUrl`; its return values use opaque keys that are never serialized by API response schemas.
 
   ```ts
   export interface ObjectStore {
@@ -355,14 +355,14 @@ npm run db:seed
   }
   ```
 
-- [ ] Write failing image tests for allowed MIME signatures, a mismatched extension/MIME signature, byte size `< 10_000_000`, minimum `512x384`, maximum side `4096`, and Sharp metadata failures.
-- [ ] Run `npm run test:unit -- tests/unit/validate-image.test.ts` and confirm the invalid fixtures are not yet rejected.
-- [ ] Implement `validateImage(bytes, declaredContentType)` using magic bytes plus Sharp metadata. Return normalized metadata or typed codes `unsupported_type`, `too_large`, `too_small`, `too_large_dimensions`, and `unreadable` with shopper-facing guidance.
-- [ ] Implement `S3ObjectStore` with private `PutObject`, `GetObject`, `DeleteObject`, and five-minute presigned GET URLs. Construct keys server-side as `briefs/{briefId}/source/{uuid}.{ext}`, `listings/{listingId}/garment/{uuid}.{ext}`, and `jobs/{jobId}/result/{uuid}.jpg`.
-- [ ] Write a privacy integration test against MinIO that uploads an object, proves anonymous HTTP GET is denied, proves the signed URL works, deletes it, and proves both direct and newly signed reads fail.
-- [ ] Implement the media Route Handler as an authenticated redirect to a newly signed URL after resource authorization. It accepts a database media ID, never an object key; providers can read their listing images but cannot read brief source images.
-- [ ] Run the focused unit/integration tests and inspect test output for signed URLs or secret values; confirm none appear.
-- [ ] Commit: `feat: validate and protect marketplace media`
+- [x] Write failing image tests for allowed MIME signatures, a mismatched extension/MIME signature, byte size `< 10_000_000`, minimum `512x384`, maximum side `4096`, and Sharp metadata failures.
+- [x] Run `npm run test:unit -- tests/unit/validate-image.test.ts` and confirm the invalid fixtures are not yet rejected.
+- [x] Implement `validateImage(bytes, declaredContentType)` using magic bytes plus Sharp metadata. Return normalized metadata or typed codes `unsupported_type`, `too_large`, `too_small`, `too_large_dimensions`, and `unreadable` with shopper-facing guidance.
+- [x] Implement `S3ObjectStore` with private `PutObject`, `GetObject`, `DeleteObject`, and five-minute presigned GET URLs. Construct keys server-side as `briefs/{briefId}/source/{uuid}.{ext}`, `listings/{listingId}/garment/{uuid}.{ext}`, and `jobs/{jobId}/result/{uuid}.jpg`.
+- [x] Write a privacy integration test against MinIO that uploads an object, proves anonymous HTTP GET is denied, proves the signed URL works, deletes it, and proves both direct and newly signed reads fail.
+- [x] Implement the media Route Handler as an authenticated redirect to a newly signed URL after resource authorization. It accepts a database media ID, never an object key; providers can read their listing images but cannot read brief source images.
+- [x] Run the focused unit/integration tests and inspect test output for signed URLs or secret values; confirm none appear.
+- [x] Commit: `feat: validate and protect marketplace media`
 
 ## Task 8: Build the official YouCam Clothes v3 adapter
 
