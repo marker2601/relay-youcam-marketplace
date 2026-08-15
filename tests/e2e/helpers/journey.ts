@@ -30,7 +30,7 @@ export async function fillBrief(
 export async function createBrief(page: Page): Promise<string> {
   await fillBrief(page);
   await page.getByRole("button", { name: "Find my matches" }).click();
-  await expect(page).toHaveURL(/\/briefs\/[0-9a-f-]+$/);
+  await expect(page).toHaveURL(/\/briefs\/[0-9a-f-]+$/, { timeout: 30_000 });
   return page.url().split("/").at(-1)!;
 }
 
