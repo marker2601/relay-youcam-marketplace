@@ -213,7 +213,7 @@ npm run db:seed
 - Test: `tests/unit/schemas.test.ts`
 - Test: `tests/contract/api-responses.test.ts`
 
-- [ ] In `contracts.ts`, define string unions for `DemoRole`, `ProviderType`, `GarmentCategory`, `OfferStatus`, `ReservationStatus`, and `TryOnJobStatus`; define integer-tenths measurement types and the public read models `BriefDetail`, `OfferCard`, `ProviderRequest`, and `ReservationDetail`.
+- [x] In `contracts.ts`, define string unions for `DemoRole`, `ProviderType`, `GarmentCategory`, `OfferStatus`, `ReservationStatus`, and `TryOnJobStatus`; define integer-tenths measurement types and the public read models `BriefDetail`, `OfferCard`, `ProviderRequest`, and `ReservationDetail`.
 
   ```ts
   export type EventType = "wedding_guest" | "cocktail_party" | "gala" | "holiday_party";
@@ -228,13 +228,13 @@ npm run db:seed
   export type TenthsCm = number & { readonly __unit: "tenths_cm" };
   ```
 
-- [ ] Write failing schema tests for an event in the past, inverted budget, missing consent, non-integer measurements, unsupported category, empty required tags, invalid price, and an unavailable date range whose end precedes its start.
-- [ ] Run `npm run test:unit -- tests/unit/schemas.test.ts` and confirm the cases fail.
-- [ ] Implement Zod schemas `createBriefCommandSchema`, `createListingCommandSchema`, `requestReservationCommandSchema`, and `acceptReservationCommandSchema`. Use ISO `YYYY-MM-DD` strings at the HTTP boundary and convert to UTC only inside repositories.
-- [ ] Add a response-contract test that parses a complete `OfferCard`, verifies that it contains a signed `imageUrl` but no object key, and verifies that provider read models contain no shopper image field or measurement profile.
-- [ ] Implement `offerCardSchema`, `providerRequestSchema`, and `reservationDetailSchema`; export inferred types and use `satisfies` in fixtures so compile-time and runtime contracts stay aligned.
-- [ ] Run the focused unit and contract tests plus `npm run typecheck`; confirm all pass.
-- [ ] Commit: `feat: define Relay domain and API contracts`
+- [x] Write failing schema tests for an event in the past, inverted budget, missing consent, non-integer measurements, unsupported category, empty required tags, invalid price, and an unavailable date range whose end precedes its start.
+- [x] Run `npm run test:unit -- tests/unit/schemas.test.ts` and confirm the cases fail.
+- [x] Implement Zod schemas `createBriefCommandSchema`, `createListingCommandSchema`, `requestReservationCommandSchema`, and `acceptReservationCommandSchema`. Use ISO `YYYY-MM-DD` strings at the HTTP boundary and convert to UTC only inside repositories.
+- [x] Add a response-contract test that parses a complete `OfferCard`, verifies that it contains a signed `imageUrl` but no object key, and verifies that provider read models contain no shopper image field or measurement profile.
+- [x] Implement `offerCardSchema`, `providerRequestSchema`, and `reservationDetailSchema`; export inferred types and use `satisfies` in fixtures so compile-time and runtime contracts stay aligned.
+- [x] Run the focused unit and contract tests plus `npm run typecheck`; confirm all pass.
+- [x] Commit: `feat: define Relay domain and API contracts`
 
 ## Task 3: Add PostgreSQL, migrations, and database invariants
 
