@@ -376,11 +376,11 @@ npm run db:seed
 
 **Reference:** [Official AI Clothes Virtual Try-On guide](https://docs.perfectcorp.com/reference/ai_clothes/section/overview). The adapter must use the documented file registration -> presigned PUT -> task creation -> status polling flow.
 
-- [ ] Capture sanitized JSON fixtures for: file registration with `file_id` and upload request; task creation with `task_id`; running status; success with result URL; engine failure; and HTTP 429. Keep no real key or unexpired signed URL in the repository.
-- [ ] Write MSW contract tests proving the bearer token is sent only to `yce-api-01.makeupar.com`, the signed PUT receives the exact byte length and MIME type but no bearer token, and task creation uses the returned IDs.
-- [ ] Run `npm run test:unit -- tests/contract/youcam-client.test.ts` and confirm it fails because the adapter does not exist.
-- [ ] Define and Zod-parse the wire responses. Reject a 200 response with a malformed body as `invalid_upstream_response`; do not cast unvalidated JSON.
-- [ ] Implement this narrow interface:
+- [x] Capture sanitized JSON fixtures for: file registration with `file_id` and upload request; task creation with `task_id`; running status; success with result URL; engine failure; and HTTP 429. Keep no real key or unexpired signed URL in the repository.
+- [x] Write MSW contract tests proving the bearer token is sent only to `yce-api-01.makeupar.com`, the signed PUT receives the exact byte length and MIME type but no bearer token, and task creation uses the returned IDs.
+- [x] Run `npm run test:unit -- tests/contract/youcam-client.test.ts` and confirm it fails because the adapter does not exist.
+- [x] Define and Zod-parse the wire responses. Reject a 200 response with a malformed body as `invalid_upstream_response`; do not cast unvalidated JSON.
+- [x] Implement this narrow interface:
 
   ```ts
   export interface ClothesV3Client {
@@ -398,11 +398,11 @@ npm run db:seed
   }
   ```
 
-- [ ] Implement `upload` as `POST /s2s/v2.0/file/cloth-v3` with `files[{content_type,file_name,file_size}]`, mapping browser `image/jpeg` to YouCam's documented `image/jpg`, then perform the returned `PUT` with exactly the returned headers. Implement `createTask` with `src_file_id`, `ref_file_id`, and `garment_category`. Implement polling at `GET /s2s/v2.0/task/cloth-v3/{task_id}`.
-- [ ] Map documented engine codes into `invalid_source`, `invalid_reference`, `unsafe_content`, `download_failed`, `engine_failed`, `rate_limited`, `transient_upstream`, or `invalid_upstream_response`; attach `retryable` based on Task 6 policy.
-- [ ] Add tests proving an API-key substring, upload URL query string, and source bytes do not appear in error messages. Abort each fetch after 15 seconds.
-- [ ] Run the contract test, typecheck, and lint; confirm all pass.
-- [ ] Commit: `feat: add YouCam Clothes v3 adapter`
+- [x] Implement `upload` as `POST /s2s/v2.0/file/cloth-v3` with `files[{content_type,file_name,file_size}]`, mapping browser `image/jpeg` to YouCam's documented `image/jpg`, then perform the returned `PUT` with exactly the returned headers. Implement `createTask` with `src_file_id`, `ref_file_id`, and `garment_category`. Implement polling at `GET /s2s/v2.0/task/cloth-v3/{task_id}`.
+- [x] Map documented engine codes into `invalid_source`, `invalid_reference`, `unsafe_content`, `download_failed`, `engine_failed`, `rate_limited`, `transient_upstream`, or `invalid_upstream_response`; attach `retryable` based on Task 6 policy.
+- [x] Add tests proving an API-key substring, upload URL query string, and source bytes do not appear in error messages. Abort each fetch after 15 seconds.
+- [x] Run the contract test, typecheck, and lint; confirm all pass.
+- [x] Commit: `feat: add YouCam Clothes v3 adapter`
 
 ## Task 9: Persist and advance idempotent try-on jobs
 

@@ -1,0 +1,22 @@
+{
+  "status": 200,
+  "data": {
+    "files": [
+      {
+        "content_type": "image/jpg",
+        "file_name": "source.jpg",
+        "file_id": "file-source-123",
+        "requests": [
+          {
+            "method": "PUT",
+            "url": "https://upload.example.test/relay-source?X-Amz-Signature=redacted",
+            "headers": {
+              "Content-Length": "4",
+              "Content-Type": "image/jpg"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

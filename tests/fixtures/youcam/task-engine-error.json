@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "data": {
+    "task_status": "error",
+    "error": "error_invalid_ref",
+    "error_message": "The reference image is invalid."
+  }
+}
