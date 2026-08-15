@@ -1,0 +1,1 @@
+ALTER TABLE "event_briefs" ALTER COLUMN "shopper_media_id" DROP NOT NULL;

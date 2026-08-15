@@ -1,0 +1,1523 @@
+{
+  "id": "0e988358-79ef-43ab-9904-51b283c8ae85",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.event_briefs": {
+      "name": "event_briefs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "shopper_id": {
+          "name": "shopper_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "event_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_date": {
+          "name": "event_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dress_code": {
+          "name": "dress_code",
+          "type": "dress_code",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "budget_min_cents": {
+          "name": "budget_min_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "budget_max_cents": {
+          "name": "budget_max_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "garment_category": {
+          "name": "garment_category",
+          "type": "garment_category",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "size_label": {
+          "name": "size_label",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "measurement_profile": {
+          "name": "measurement_profile",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "location_band": {
+          "name": "location_band",
+          "type": "location_band",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "radius_miles": {
+          "name": "radius_miles",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "preferred_colors": {
+          "name": "preferred_colors",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "style_tags": {
+          "name": "style_tags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "exclusions": {
+          "name": "exclusions",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shopper_media_id": {
+          "name": "shopper_media_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "photo_consent_at": {
+          "name": "photo_consent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "brief_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'matching'"
+        },
+        "matching_revision": {
+          "name": "matching_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "event_briefs_shopper_created_idx": {
+          "name": "event_briefs_shopper_created_idx",
+          "columns": [
+            {
+              "expression": "shopper_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_briefs_shopper_id_users_id_fk": {
+          "name": "event_briefs_shopper_id_users_id_fk",
+          "tableFrom": "event_briefs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "shopper_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "event_briefs_shopper_media_id_media_objects_id_fk": {
+          "name": "event_briefs_shopper_media_id_media_objects_id_fk",
+          "tableFrom": "event_briefs",
+          "tableTo": "media_objects",
+          "columnsFrom": [
+            "shopper_media_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "event_briefs_shopper_media_id_unique": {
+          "name": "event_briefs_shopper_media_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "shopper_media_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "event_briefs_nonnegative_budget_check": {
+          "name": "event_briefs_nonnegative_budget_check",
+          "value": "\"event_briefs\".\"budget_min_cents\" >= 0"
+        },
+        "event_briefs_budget_order_check": {
+          "name": "event_briefs_budget_order_check",
+          "value": "\"event_briefs\".\"budget_min_cents\" <= \"event_briefs\".\"budget_max_cents\""
+        },
+        "event_briefs_radius_check": {
+          "name": "event_briefs_radius_check",
+          "value": "\"event_briefs\".\"radius_miles\" BETWEEN 1 AND 100"
+        },
+        "event_briefs_revision_check": {
+          "name": "event_briefs_revision_check",
+          "value": "\"event_briefs\".\"matching_revision\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.idempotency_keys": {
+      "name": "idempotency_keys",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope": {
+          "name": "scope",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "response_resource_id": {
+          "name": "response_resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idempotency_keys_actor_scope_key_unique": {
+          "name": "idempotency_keys_actor_scope_key_unique",
+          "columns": [
+            {
+              "expression": "actor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "scope",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idempotency_keys_created_idx": {
+          "name": "idempotency_keys_created_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "idempotency_keys_actor_id_users_id_fk": {
+          "name": "idempotency_keys_actor_id_users_id_fk",
+          "tableFrom": "idempotency_keys",
+          "tableTo": "users",
+          "columnsFrom": [
+            "actor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.listings": {
+      "name": "listings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "garment_category": {
+          "name": "garment_category",
+          "type": "garment_category",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "size_label": {
+          "name": "size_label",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "measurements": {
+          "name": "measurements",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "condition": {
+          "name": "condition",
+          "type": "garment_condition",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "color_tags": {
+          "name": "color_tags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "style_tags": {
+          "name": "style_tags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rental_price_cents": {
+          "name": "rental_price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deposit_display_cents": {
+          "name": "deposit_display_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "service_radius_miles": {
+          "name": "service_radius_miles",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "location_band": {
+          "name": "location_band",
+          "type": "location_band",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "garment_media_id": {
+          "name": "garment_media_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unavailable_ranges": {
+          "name": "unavailable_ranges",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reliability_basis_points": {
+          "name": "reliability_basis_points",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 8000
+        },
+        "status": {
+          "name": "status",
+          "type": "listing_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "listings_status_category_idx": {
+          "name": "listings_status_category_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "garment_category",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "listings_provider_id_users_id_fk": {
+          "name": "listings_provider_id_users_id_fk",
+          "tableFrom": "listings",
+          "tableTo": "users",
+          "columnsFrom": [
+            "provider_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "listings_garment_media_id_media_objects_id_fk": {
+          "name": "listings_garment_media_id_media_objects_id_fk",
+          "tableFrom": "listings",
+          "tableTo": "media_objects",
+          "columnsFrom": [
+            "garment_media_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "listings_garment_media_id_unique": {
+          "name": "listings_garment_media_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "garment_media_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "listings_nonnegative_rental_price_check": {
+          "name": "listings_nonnegative_rental_price_check",
+          "value": "\"listings\".\"rental_price_cents\" >= 0"
+        },
+        "listings_nonnegative_deposit_check": {
+          "name": "listings_nonnegative_deposit_check",
+          "value": "\"listings\".\"deposit_display_cents\" >= 0"
+        },
+        "listings_service_radius_check": {
+          "name": "listings_service_radius_check",
+          "value": "\"listings\".\"service_radius_miles\" BETWEEN 1 AND 100"
+        },
+        "listings_reliability_check": {
+          "name": "listings_reliability_check",
+          "value": "\"listings\".\"reliability_basis_points\" BETWEEN 0 AND 10000"
+        },
+        "listings_version_check": {
+          "name": "listings_version_check",
+          "value": "\"listings\".\"version\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.matches": {
+      "name": "matches",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "brief_id": {
+          "name": "brief_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "listing_id": {
+          "name": "listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "brief_revision": {
+          "name": "brief_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "listing_version": {
+          "name": "listing_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "score_basis_points": {
+          "name": "score_basis_points",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "score_breakdown": {
+          "name": "score_breakdown",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "explanation": {
+          "name": "explanation",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "matches_brief_revision_listing_version_unique": {
+          "name": "matches_brief_revision_listing_version_unique",
+          "columns": [
+            {
+              "expression": "brief_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "brief_revision",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "listing_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "listing_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "matches_brief_id_event_briefs_id_fk": {
+          "name": "matches_brief_id_event_briefs_id_fk",
+          "tableFrom": "matches",
+          "tableTo": "event_briefs",
+          "columnsFrom": [
+            "brief_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "matches_listing_id_listings_id_fk": {
+          "name": "matches_listing_id_listings_id_fk",
+          "tableFrom": "matches",
+          "tableTo": "listings",
+          "columnsFrom": [
+            "listing_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "matches_score_check": {
+          "name": "matches_score_check",
+          "value": "\"matches\".\"score_basis_points\" BETWEEN 0 AND 10000"
+        },
+        "matches_brief_revision_check": {
+          "name": "matches_brief_revision_check",
+          "value": "\"matches\".\"brief_revision\" > 0"
+        },
+        "matches_listing_version_check": {
+          "name": "matches_listing_version_check",
+          "value": "\"matches\".\"listing_version\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.media_objects": {
+      "name": "media_objects",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "owner_user_id": {
+          "name": "owner_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "media_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "object_key": {
+          "name": "object_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content_type": {
+          "name": "content_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "byte_size": {
+          "name": "byte_size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "brief_id": {
+          "name": "brief_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "listing_id": {
+          "name": "listing_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletion_status": {
+          "name": "deletion_status",
+          "type": "media_deletion_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "deletion_error_code": {
+          "name": "deletion_error_code",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "media_objects_owner_deleted_idx": {
+          "name": "media_objects_owner_deleted_idx",
+          "columns": [
+            {
+              "expression": "owner_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "deleted_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "media_objects_owner_user_id_users_id_fk": {
+          "name": "media_objects_owner_user_id_users_id_fk",
+          "tableFrom": "media_objects",
+          "tableTo": "users",
+          "columnsFrom": [
+            "owner_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "media_objects_object_key_unique": {
+          "name": "media_objects_object_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "object_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "media_objects_positive_size_check": {
+          "name": "media_objects_positive_size_check",
+          "value": "\"media_objects\".\"byte_size\" > 0"
+        },
+        "media_objects_one_resource_check": {
+          "name": "media_objects_one_resource_check",
+          "value": "num_nonnulls(\"media_objects\".\"brief_id\", \"media_objects\".\"listing_id\", \"media_objects\".\"job_id\") = 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.offers": {
+      "name": "offers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "match_id": {
+          "name": "match_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "offer_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'matched'"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "offers_status_expires_idx": {
+          "name": "offers_status_expires_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "offers_match_id_matches_id_fk": {
+          "name": "offers_match_id_matches_id_fk",
+          "tableFrom": "offers",
+          "tableTo": "matches",
+          "columnsFrom": [
+            "match_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "offers_match_id_unique": {
+          "name": "offers_match_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "match_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.reservations": {
+      "name": "reservations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "offer_id": {
+          "name": "offer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "brief_id": {
+          "name": "brief_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shopper_id": {
+          "name": "shopper_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_date": {
+          "name": "event_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pickup_date": {
+          "name": "pickup_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "return_date": {
+          "name": "return_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rental_price_cents": {
+          "name": "rental_price_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deposit_display_cents": {
+          "name": "deposit_display_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "reservation_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'requested'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "reservations_one_active_per_brief_unique": {
+          "name": "reservations_one_active_per_brief_unique",
+          "columns": [
+            {
+              "expression": "brief_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"reservations\".\"status\" <> 'cancelled'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reservations_provider_status_idx": {
+          "name": "reservations_provider_status_idx",
+          "columns": [
+            {
+              "expression": "provider_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "reservations_offer_id_offers_id_fk": {
+          "name": "reservations_offer_id_offers_id_fk",
+          "tableFrom": "reservations",
+          "tableTo": "offers",
+          "columnsFrom": [
+            "offer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "reservations_brief_id_event_briefs_id_fk": {
+          "name": "reservations_brief_id_event_briefs_id_fk",
+          "tableFrom": "reservations",
+          "tableTo": "event_briefs",
+          "columnsFrom": [
+            "brief_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "reservations_shopper_id_users_id_fk": {
+          "name": "reservations_shopper_id_users_id_fk",
+          "tableFrom": "reservations",
+          "tableTo": "users",
+          "columnsFrom": [
+            "shopper_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "reservations_provider_id_users_id_fk": {
+          "name": "reservations_provider_id_users_id_fk",
+          "tableFrom": "reservations",
+          "tableTo": "users",
+          "columnsFrom": [
+            "provider_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "reservations_offer_id_unique": {
+          "name": "reservations_offer_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "offer_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "reservations_nonnegative_rental_price_check": {
+          "name": "reservations_nonnegative_rental_price_check",
+          "value": "\"reservations\".\"rental_price_cents\" >= 0"
+        },
+        "reservations_nonnegative_deposit_check": {
+          "name": "reservations_nonnegative_deposit_check",
+          "value": "\"reservations\".\"deposit_display_cents\" >= 0"
+        },
+        "reservations_date_order_check": {
+          "name": "reservations_date_order_check",
+          "value": "\"reservations\".\"pickup_date\" <= \"reservations\".\"event_date\" AND \"reservations\".\"event_date\" <= \"reservations\".\"return_date\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.try_on_jobs": {
+      "name": "try_on_jobs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "match_id": {
+          "name": "match_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'youcam'"
+        },
+        "source_file_id": {
+          "name": "source_file_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reference_file_id": {
+          "name": "reference_file_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_task_id": {
+          "name": "external_task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "try_on_job_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'queued'"
+        },
+        "attempt_count": {
+          "name": "attempt_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "next_poll_at": {
+          "name": "next_poll_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "normalized_error_code": {
+          "name": "normalized_error_code",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result_media_id": {
+          "name": "result_media_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "try_on_jobs_status_next_poll_idx": {
+          "name": "try_on_jobs_status_next_poll_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "next_poll_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "try_on_jobs_match_id_matches_id_fk": {
+          "name": "try_on_jobs_match_id_matches_id_fk",
+          "tableFrom": "try_on_jobs",
+          "tableTo": "matches",
+          "columnsFrom": [
+            "match_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "try_on_jobs_result_media_id_media_objects_id_fk": {
+          "name": "try_on_jobs_result_media_id_media_objects_id_fk",
+          "tableFrom": "try_on_jobs",
+          "tableTo": "media_objects",
+          "columnsFrom": [
+            "result_media_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "try_on_jobs_match_id_unique": {
+          "name": "try_on_jobs_match_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "match_id"
+          ]
+        },
+        "try_on_jobs_external_task_id_unique": {
+          "name": "try_on_jobs_external_task_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "external_task_id"
+          ]
+        },
+        "try_on_jobs_result_media_id_unique": {
+          "name": "try_on_jobs_result_media_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "result_media_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "try_on_jobs_provider_check": {
+          "name": "try_on_jobs_provider_check",
+          "value": "\"try_on_jobs\".\"provider\" = 'youcam'"
+        },
+        "try_on_jobs_attempt_count_check": {
+          "name": "try_on_jobs_attempt_count_check",
+          "value": "\"try_on_jobs\".\"attempt_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "demo_role": {
+          "name": "demo_role",
+          "type": "demo_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_type": {
+          "name": "provider_type",
+          "type": "provider_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "users_role_provider_type_check": {
+          "name": "users_role_provider_type_check",
+          "value": "(\"users\".\"demo_role\" = 'shopper' AND \"users\".\"provider_type\" IS NULL) OR (\"users\".\"demo_role\" = 'provider' AND \"users\".\"provider_type\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.brief_status": {
+      "name": "brief_status",
+      "schema": "public",
+      "values": [
+        "matching",
+        "active",
+        "no_matches",
+        "deleting",
+        "deleted"
+      ]
+    },
+    "public.demo_role": {
+      "name": "demo_role",
+      "schema": "public",
+      "values": [
+        "shopper",
+        "provider"
+      ]
+    },
+    "public.dress_code": {
+      "name": "dress_code",
+      "schema": "public",
+      "values": [
+        "cocktail",
+        "formal",
+        "semi_formal",
+        "festive"
+      ]
+    },
+    "public.event_type": {
+      "name": "event_type",
+      "schema": "public",
+      "values": [
+        "wedding_guest",
+        "cocktail_party",
+        "gala",
+        "holiday_party"
+      ]
+    },
+    "public.garment_category": {
+      "name": "garment_category",
+      "schema": "public",
+      "values": [
+        "upper_body",
+        "lower_body",
+        "full_body"
+      ]
+    },
+    "public.garment_condition": {
+      "name": "garment_condition",
+      "schema": "public",
+      "values": [
+        "excellent",
+        "good",
+        "fair"
+      ]
+    },
+    "public.listing_status": {
+      "name": "listing_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "inactive"
+      ]
+    },
+    "public.location_band": {
+      "name": "location_band",
+      "schema": "public",
+      "values": [
+        "loop",
+        "west",
+        "north"
+      ]
+    },
+    "public.media_deletion_status": {
+      "name": "media_deletion_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "deleting",
+        "deleted",
+        "delete_failed"
+      ]
+    },
+    "public.media_kind": {
+      "name": "media_kind",
+      "schema": "public",
+      "values": [
+        "brief_source",
+        "listing_garment",
+        "try_on_result"
+      ]
+    },
+    "public.offer_status": {
+      "name": "offer_status",
+      "schema": "public",
+      "values": [
+        "matched",
+        "generating",
+        "ready",
+        "failed",
+        "reservation_requested",
+        "accepted",
+        "declined",
+        "expired"
+      ]
+    },
+    "public.provider_type": {
+      "name": "provider_type",
+      "schema": "public",
+      "values": [
+        "peer",
+        "boutique"
+      ]
+    },
+    "public.reservation_status": {
+      "name": "reservation_status",
+      "schema": "public",
+      "values": [
+        "requested",
+        "confirmed",
+        "ready_for_pickup",
+        "in_use",
+        "returned",
+        "cancelled"
+      ]
+    },
+    "public.try_on_job_status": {
+      "name": "try_on_job_status",
+      "schema": "public",
+      "values": [
+        "queued",
+        "uploading",
+        "processing",
+        "succeeded",
+        "failed"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

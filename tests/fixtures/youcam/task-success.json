@@ -1,0 +1,10 @@
+{
+  "status": 200,
+  "data": {
+    "task_status": "success",
+    "error": null,
+    "results": {
+      "url": "https://results.example.test/relay-result.jpg?token=redacted"
+    }
+  }
+}
