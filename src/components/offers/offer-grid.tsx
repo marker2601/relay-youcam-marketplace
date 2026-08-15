@@ -108,8 +108,9 @@ export function OfferGrid({ snapshot, refinement, onRefine, onImageExpired }: Of
               </label>
               {refineError && <p role="alert" className="form-error">{refineError}</p>}
               <button className="primary-action" type="submit" disabled={refining}>
-                {refining ? "Searching…" : "Search again"}
+                Search again
               </button>
+              {refining && <span className="sr-only" role="status">Searching for new matches</span>}
             </form>
           )}
         </section>

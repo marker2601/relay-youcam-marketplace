@@ -153,8 +153,9 @@ export function ListingForm({ initial }: { initial?: EditableListing }) {
       <p className="form-footnote">JPEG or PNG, under 10 MB, at least 512×384. Photograph one garment clearly with no person in frame.</p>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="primary-action" type="submit" disabled={pending}>
-        {pending ? "Saving…" : initial ? "Save listing" : "Publish listing"}
+        {initial ? "Save listing" : "Publish listing"}
       </button>
+      {pending && <span className="sr-only" role="status">Saving listing</span>}
     </form>
   );
 }

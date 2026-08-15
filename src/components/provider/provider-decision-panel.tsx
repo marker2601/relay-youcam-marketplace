@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface ProviderDecisionPanelProps {
   reservationId: string;
@@ -14,9 +14,11 @@ export function ProviderDecisionPanel({ reservationId, terminal }: ProviderDecis
   const [declineText, setDeclineText] = useState("");
   const [pending, setPending] = useState<"accept" | "decline" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const pendingRef = useRef(false);
 
   async function decide(decision: "accept" | "decline") {
-    if (terminal || pending) return;
+    if (terminal || pendingRef.current) return;
+    pendingRef.current = true;
     setPending(decision);
     setError(null);
     try {
@@ -29,6 +31,7 @@ export function ProviderDecisionPanel({ reservationId, terminal }: ProviderDecis
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Relay could not update this request.");
       setPending(null);
+      pendingRef.current = false;
     }
   }
 
@@ -50,7 +53,7 @@ export function ProviderDecisionPanel({ reservationId, terminal }: ProviderDecis
             disabled={pending !== null || acceptText !== "ACCEPT"}
             onClick={() => decide("accept")}
           >
-            {pending === "accept" ? "Accepting…" : "Accept request"}
+            Accept request
           </button>
         </label>
         <label>
@@ -62,10 +65,15 @@ export function ProviderDecisionPanel({ reservationId, terminal }: ProviderDecis
             disabled={pending !== null || declineText !== "DECLINE"}
             onClick={() => decide("decline")}
           >
-            {pending === "decline" ? "Declining…" : "Decline request"}
+            Decline request
           </button>
         </label>
       </div>
+      {pending && (
+        <span className="sr-only" role="status">
+          {pending === "accept" ? "Accepting request" : "Declining request"}
+        </span>
+      )}
       {error && <p className="form-error" role="alert">{error}</p>}
     </section>
   );

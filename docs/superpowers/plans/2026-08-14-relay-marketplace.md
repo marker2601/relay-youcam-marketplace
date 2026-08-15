@@ -556,15 +556,15 @@ npm run db:seed
 - Test: `tests/e2e/relay-flow.spec.ts`
 - Test: `tests/e2e/accessibility.spec.ts`
 
-- [ ] Establish the visual tokens in CSS: warm paper `#F7F3EC`, ink `#14251C`, Relay green `#176B51`, coral action accent `#D75F4A`, muted gold `#B78A35`, 16px cards, high-contrast focus rings, and restrained motion that respects `prefers-reduced-motion`.
-- [ ] Use an editorial marketplace composition: concise serif display headings with system sans-serif controls, real garment imagery, visible pricing, dense useful metadata, and one primary action per screen. Avoid gradients, glass effects, anonymous stock portraits, and decorative AI imagery.
-- [ ] Write a Playwright shopper/provider test using the fake YouCam adapter: select shopper, create brief with fixture photo, watch three offers resolve, request the top offer, switch to its provider, accept, switch back, and assert confirmed timeline.
-- [ ] Add E2E scenarios for invalid photo recovery, one failed preview beside two successes, no-match widening, duplicate clicks, direct unauthorized URL, brief deletion, and mobile viewport.
-- [ ] Write accessibility assertions for landmarks, heading order, labels/descriptions, keyboard-only completion, visible focus, live status announcements, dialog focus return, 44px touch targets, color-independent state, descriptive image alt text, and no horizontal scroll at 320px.
-- [ ] Run `npm run test:e2e` and confirm the new scenarios fail before polish is complete.
-- [ ] Implement missing responsive, keyboard, loading, empty, partial-failure, and focus behaviors. Use skeletons only for fixed content regions and keep submit/accept text stable while disabled.
-- [ ] Rerun E2E at Chromium desktop and mobile; manually inspect Safari/Firefox-compatible behavior through Playwright projects if configured.
-- [ ] Commit: `test: verify Relay marketplace journeys end to end`
+- [x] Establish the visual tokens in CSS: warm paper `#F7F3EC`, ink `#14251C`, Relay green `#176B51`, coral action accent `#D75F4A`, muted gold `#B78A35`, 16px cards, high-contrast focus rings, and restrained motion that respects `prefers-reduced-motion`.
+- [x] Use an editorial marketplace composition: concise serif display headings with system sans-serif controls, real garment imagery, visible pricing, dense useful metadata, and one primary action per screen. Avoid gradients, glass effects, anonymous stock portraits, and decorative AI imagery.
+- [x] Write a Playwright shopper/provider test using the fake YouCam adapter: select shopper, create brief with fixture photo, watch three offers resolve, request the top offer, switch to its provider, accept, switch back, and assert confirmed timeline.
+- [x] Add E2E scenarios for invalid photo recovery, one failed preview beside two successes, no-match widening, duplicate clicks, direct unauthorized URL, brief deletion, and mobile viewport.
+- [x] Write accessibility assertions for landmarks, heading order, labels/descriptions, keyboard-only completion, visible focus, live status announcements, dialog focus return, 44px touch targets, color-independent state, descriptive image alt text, and no horizontal scroll at 320px.
+- [x] Run `npm run test:e2e` and confirm the new scenarios fail before polish is complete.
+- [x] Implement missing responsive, keyboard, loading, empty, partial-failure, and focus behaviors. Use skeletons only for fixed content regions and keep submit/accept text stable while disabled.
+- [x] Rerun E2E at Chromium desktop and mobile; manually inspect Safari/Firefox-compatible behavior through Playwright projects if configured.
+- [x] Commit: `test: verify Relay marketplace journeys end to end`
 
 ## Task 16: Deploy, validate real YouCam, and prepare the Devpost submission
 

@@ -185,8 +185,9 @@ export function BriefPhotoReplacement({
         </label>
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="primary-action" type="submit" disabled={pending}>
-          {pending ? "Replacing…" : "Replace photo and retry"}
+          Replace photo and retry
         </button>
+        {pending && <span className="sr-only" role="status">Replacing photo</span>}
       </form>
     </section>
   );
@@ -434,8 +435,9 @@ export function BriefForm({
 
       {serverError && <p role="alert" className="form-error">{serverError}</p>}
       <button className="primary-action" type="submit" disabled={pending}>
-        {pending ? "Finding matches…" : "Find my matches"}
+        Find my matches
       </button>
+      {pending && <span className="sr-only" role="status">Finding matches</span>}
       <p className="form-footnote">
         You can widen the distance, budget, category, or colors later without uploading this photo again.
       </p>

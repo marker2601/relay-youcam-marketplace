@@ -72,7 +72,8 @@ describe("BriefForm", () => {
     await fillRequired(user);
 
     await user.click(screen.getByRole("button", { name: "Find my matches" }));
-    expect(screen.getByRole("button", { name: "Finding matches…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Find my matches" })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("Finding matches");
     resolve({ briefId: "11111111-1111-4111-8111-111111111111" });
   });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface ReserveOfferButtonProps {
   offerId: string;
@@ -12,9 +12,11 @@ export function ReserveOfferButton({ offerId, garmentTitle }: ReserveOfferButton
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pendingRef = useRef(false);
 
   async function reserve() {
-    if (pending) return;
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setPending(true);
     setError(null);
     try {
@@ -28,6 +30,7 @@ export function ReserveOfferButton({ offerId, garmentTitle }: ReserveOfferButton
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "This offer could not be requested.");
       setPending(false);
+      pendingRef.current = false;
     }
   }
 
@@ -40,8 +43,9 @@ export function ReserveOfferButton({ offerId, garmentTitle }: ReserveOfferButton
         disabled={pending}
         aria-busy={pending}
       >
-        {pending ? "Sending request…" : `Request ${garmentTitle}`}
+        {`Request ${garmentTitle}`}
       </button>
+      {pending && <span className="sr-only" role="status">Sending reservation request</span>}
       {error && <p className="form-error" role="alert">{error}</p>}
     </>
   );

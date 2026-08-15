@@ -95,7 +95,7 @@ export function OfferProgress({
         const next = await processOffers(snapshot.briefId);
         setSnapshot(next);
         setGenerationError(null);
-        setPollDelay((current) => Math.min(Math.max(minimumPollDelayMs, current * 2), 15_000));
+        setPollDelay(minimumPollDelayMs);
       } catch {
         setGenerationError("Preview generation paused. Relay will retry safely.");
         setPollDelay((current) => Math.min(Math.max(minimumPollDelayMs, current * 2), 15_000));
