@@ -412,16 +412,16 @@ npm run db:seed
 - Create: `src/lib/repositories/marketplace.ts`
 - Test: `tests/integration/brief-flow.test.ts`
 
-- [ ] Define repository transaction methods `createMatchesAndJobs`, `claimDueJobs`, `recordExternalTask`, `schedulePoll`, `completeJob`, and `failJob`. Claim with `SELECT ... FOR UPDATE SKIP LOCKED` and compare the persisted state in every update.
-- [ ] Write an integration test where creating a canonical brief produces exactly three matches, three offers in `matched`, and three unique jobs in `queued`; submitting the same idempotency key returns the same IDs and count.
-- [ ] Run `npm run test:integration -- tests/integration/brief-flow.test.ts` and confirm it fails before the repository exists.
-- [ ] Implement `createMatchesAndJobs` in one transaction: load active candidates, call the pure matcher, insert match breakdowns/explanations, insert one job and offer per match, and persist the command idempotency key.
-- [ ] Extend the test with a fake `ClothesV3Client` and in-memory `ObjectStore`: successive advances upload and persist the source file ID, upload and persist the reference file ID, create and persist one task ID, report processing, then download/copy the result, mark the job `succeeded`, and change the offer to `ready`.
-- [ ] Implement `TryOnOrchestrator.advanceBrief(briefId, now)` with a concurrency cap of three and at most one lifecycle phase per claimed job per request. Resume from the first missing persisted file/task ID; if an external task ID exists, only poll it and never upload or recreate the task.
-- [ ] Add a partial-failure test where the middle job receives `invalid_reference`; assert only its job/offer fail and the other two reach ready. Add a retry test where 429 changes only `attemptCount` and `nextPollAt`.
-- [ ] Implement result-copy recovery: if downloading the result URL returns expired/forbidden, call `getTask(externalTaskId)` once for a fresh URL, then copy; if it still fails, schedule a retry without losing the task ID.
-- [ ] Run the focused integration test and `npm run typecheck`; confirm all pass.
-- [ ] Commit: `feat: orchestrate persisted virtual try-on jobs`
+- [x] Define repository transaction methods `createMatchesAndJobs`, `claimDueJobs`, `recordExternalTask`, `schedulePoll`, `completeJob`, and `failJob`. Claim with `SELECT ... FOR UPDATE SKIP LOCKED` and compare the persisted state in every update.
+- [x] Write an integration test where creating a canonical brief produces exactly three matches, three offers in `matched`, and three unique jobs in `queued`; submitting the same idempotency key returns the same IDs and count.
+- [x] Run `npm run test:integration -- tests/integration/brief-flow.test.ts` and confirm it fails before the repository exists.
+- [x] Implement `createMatchesAndJobs` in one transaction: load active candidates, call the pure matcher, insert match breakdowns/explanations, insert one job and offer per match, and persist the command idempotency key.
+- [x] Extend the test with a fake `ClothesV3Client` and in-memory `ObjectStore`: successive advances upload and persist the source file ID, upload and persist the reference file ID, create and persist one task ID, report processing, then download/copy the result, mark the job `succeeded`, and change the offer to `ready`.
+- [x] Implement `TryOnOrchestrator.advanceBrief(briefId, now)` with a concurrency cap of three and at most one lifecycle phase per claimed job per request. Resume from the first missing persisted file/task ID; if an external task ID exists, only poll it and never upload or recreate the task.
+- [x] Add a partial-failure test where the middle job receives `invalid_reference`; assert only its job/offer fail and the other two reach ready. Add a retry test where 429 changes only `attemptCount` and `nextPollAt`.
+- [x] Implement result-copy recovery: if downloading the result URL returns expired/forbidden, call `getTask(externalTaskId)` once for a fresh URL, then copy; if it still fails, schedule a retry without losing the task ID.
+- [x] Run the focused integration test and `npm run typecheck`; confirm all pass.
+- [x] Commit: `feat: orchestrate persisted virtual try-on jobs`
 
 ## Task 10: Add signed demo sessions and authorized repositories
 
