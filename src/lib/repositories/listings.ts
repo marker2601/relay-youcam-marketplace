@@ -2,7 +2,15 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import type { Actor } from "@/lib/auth/demo-session";
 import type { Database } from "@/lib/db/client";
-import { eventBriefs, listings, matches, mediaObjects, offers } from "@/lib/db/schema";
+import {
+  eventBriefs,
+  listings,
+  matches,
+  mediaObjects,
+  offers,
+  reservations,
+  tryOnJobs,
+} from "@/lib/db/schema";
 import type { GarmentMeasurements } from "@/lib/domain/contracts";
 import { transitionOffer } from "@/lib/domain/state-machines";
 import { NotFoundError } from "@/lib/repositories/briefs";
@@ -23,6 +31,18 @@ export interface CreateListingInput {
   unavailableRanges: Array<{ startDate: string; endDate: string }>;
 }
 
+interface CreateListingMediaInput {
+  id: string;
+  objectKey: string;
+  contentType: "image/jpeg" | "image/png";
+  byteSize: number;
+}
+
+export interface ReplaceListingImageResult {
+  listing: typeof listings.$inferSelect;
+  oldMedia: typeof mediaObjects.$inferSelect;
+}
+
 export interface ProviderRequestRecord {
   id: string;
   reservationId: null;
@@ -35,6 +55,15 @@ export interface ProviderRequestRecord {
   listingTitle: string;
   rentalPriceCents: number;
 }
+
+export class ListingEditConflictError extends Error {
+  constructor() {
+    super("A requested or confirmed reservation is using this listing");
+    this.name = "ListingEditConflictError";
+  }
+}
+
+type ListingMetadataUpdate = Partial<Omit<CreateListingInput, "garmentMediaId">>;
 
 export class ListingRepository {
   constructor(private readonly db: Database) {}
@@ -63,6 +92,245 @@ export class ListingRepository {
       .values({ ...input, providerId: actor.userId })
       .returning({ id: listings.id });
     return created!.id;
+  }
+
+  async createWithMedia(
+    actor: Actor,
+    listingId: string,
+    media: CreateListingMediaInput,
+    input: Omit<CreateListingInput, "garmentMediaId">,
+    now: Date,
+  ): Promise<string> {
+    if (actor.role !== "provider") throw new NotFoundError();
+    return this.db.transaction(async (transaction) => {
+      await transaction.insert(mediaObjects).values({
+        id: media.id,
+        ownerUserId: actor.userId,
+        kind: "listing_garment",
+        objectKey: media.objectKey,
+        contentType: media.contentType,
+        byteSize: media.byteSize,
+        listingId,
+        createdAt: now,
+      });
+      const [created] = await transaction
+        .insert(listings)
+        .values({
+          id: listingId,
+          providerId: actor.userId,
+          ...input,
+          garmentMediaId: media.id,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning({ id: listings.id });
+      return created!.id;
+    });
+  }
+
+  async getOwned(actor: Actor, listingId: string): Promise<typeof listings.$inferSelect> {
+    if (actor.role !== "provider") throw new NotFoundError();
+    const [listing] = await this.db
+      .select()
+      .from(listings)
+      .where(and(eq(listings.id, listingId), eq(listings.providerId, actor.userId)))
+      .limit(1);
+    if (!listing) throw new NotFoundError();
+    return listing;
+  }
+
+  async listOwned(actor: Actor): Promise<Array<typeof listings.$inferSelect>> {
+    if (actor.role !== "provider") throw new NotFoundError();
+    return this.db
+      .select()
+      .from(listings)
+      .where(eq(listings.providerId, actor.userId));
+  }
+
+  async updateMetadata(
+    actor: Actor,
+    listingId: string,
+    input: ListingMetadataUpdate,
+    expectedVersion: number,
+    now: Date,
+  ): Promise<typeof listings.$inferSelect> {
+    if (actor.role !== "provider" || Object.keys(input).length === 0) {
+      throw new NotFoundError();
+    }
+    return this.db.transaction(async (transaction) => {
+      const [owned] = await transaction
+        .select()
+        .from(listings)
+        .where(
+          and(
+            eq(listings.id, listingId),
+            eq(listings.providerId, actor.userId),
+            eq(listings.version, expectedVersion),
+          ),
+        )
+        .limit(1)
+        .for("update", { of: listings });
+      if (!owned) throw new NotFoundError();
+
+      const [activeReservation] = await transaction
+        .select({ id: reservations.id })
+        .from(reservations)
+        .innerJoin(offers, eq(offers.id, reservations.offerId))
+        .innerJoin(matches, eq(matches.id, offers.matchId))
+        .where(
+          and(
+            eq(matches.listingId, listingId),
+            inArray(reservations.status, ["requested", "confirmed"]),
+          ),
+        )
+        .limit(1);
+      if (activeReservation) throw new ListingEditConflictError();
+
+      const nextVersion = expectedVersion + 1;
+      const [updated] = await transaction
+        .update(listings)
+        .set({ ...input, version: nextVersion, updatedAt: now })
+        .where(
+          and(
+            eq(listings.id, listingId),
+            eq(listings.providerId, actor.userId),
+            eq(listings.version, expectedVersion),
+          ),
+        )
+        .returning();
+      if (!updated) throw new NotFoundError();
+
+      const staleMatches = await transaction
+        .select({ id: matches.id })
+        .from(matches)
+        .where(and(eq(matches.listingId, listingId), eq(matches.listingVersion, expectedVersion)));
+      if (staleMatches.length > 0) {
+        const ids = staleMatches.map((match) => match.id);
+        await transaction
+          .update(offers)
+          .set({ status: "expired" })
+          .where(
+            and(
+              inArray(offers.matchId, ids),
+              inArray(offers.status, ["matched", "generating", "ready"]),
+            ),
+          );
+        await transaction
+          .update(tryOnJobs)
+          .set({
+            status: "failed",
+            normalizedErrorCode: "superseded",
+            nextPollAt: null,
+            completedAt: now,
+          })
+          .where(
+            and(
+              inArray(tryOnJobs.matchId, ids),
+              inArray(tryOnJobs.status, ["queued", "uploading", "processing"]),
+            ),
+          );
+      }
+      return updated;
+    }, { isolationLevel: "serializable" });
+  }
+
+  async replaceImage(
+    actor: Actor,
+    listingId: string,
+    media: CreateListingMediaInput,
+    expectedVersion: number,
+    now: Date,
+  ): Promise<ReplaceListingImageResult> {
+    if (actor.role !== "provider") throw new NotFoundError();
+    return this.db.transaction(async (transaction) => {
+      const [owned] = await transaction
+        .select()
+        .from(listings)
+        .where(
+          and(
+            eq(listings.id, listingId),
+            eq(listings.providerId, actor.userId),
+            eq(listings.version, expectedVersion),
+          ),
+        )
+        .limit(1)
+        .for("update", { of: listings });
+      if (!owned) throw new NotFoundError();
+      const [oldMedia] = await transaction
+        .select()
+        .from(mediaObjects)
+        .where(and(eq(mediaObjects.id, owned.garmentMediaId), eq(mediaObjects.ownerUserId, actor.userId)))
+        .limit(1);
+      if (!oldMedia) throw new NotFoundError();
+      const [activeReservation] = await transaction
+        .select({ id: reservations.id })
+        .from(reservations)
+        .innerJoin(offers, eq(offers.id, reservations.offerId))
+        .innerJoin(matches, eq(matches.id, offers.matchId))
+        .where(
+          and(
+            eq(matches.listingId, listingId),
+            inArray(reservations.status, ["requested", "confirmed"]),
+          ),
+        )
+        .limit(1);
+      if (activeReservation) throw new ListingEditConflictError();
+
+      await transaction.insert(mediaObjects).values({
+        id: media.id,
+        ownerUserId: actor.userId,
+        kind: "listing_garment",
+        objectKey: media.objectKey,
+        contentType: media.contentType,
+        byteSize: media.byteSize,
+        listingId,
+        createdAt: now,
+      });
+      const [updated] = await transaction
+        .update(listings)
+        .set({ garmentMediaId: media.id, version: expectedVersion + 1, updatedAt: now })
+        .where(
+          and(
+            eq(listings.id, listingId),
+            eq(listings.providerId, actor.userId),
+            eq(listings.version, expectedVersion),
+          ),
+        )
+        .returning();
+      if (!updated) throw new NotFoundError();
+
+      const staleMatches = await transaction
+        .select({ id: matches.id })
+        .from(matches)
+        .where(and(eq(matches.listingId, listingId), eq(matches.listingVersion, expectedVersion)));
+      if (staleMatches.length > 0) {
+        const ids = staleMatches.map((match) => match.id);
+        await transaction
+          .update(offers)
+          .set({ status: "expired" })
+          .where(
+            and(
+              inArray(offers.matchId, ids),
+              inArray(offers.status, ["matched", "generating", "ready"]),
+            ),
+          );
+        await transaction
+          .update(tryOnJobs)
+          .set({
+            status: "failed",
+            normalizedErrorCode: "superseded",
+            nextPollAt: null,
+            completedAt: now,
+          })
+          .where(
+            and(
+              inArray(tryOnJobs.matchId, ids),
+              inArray(tryOnJobs.status, ["queued", "uploading", "processing"]),
+            ),
+          );
+      }
+      return { listing: updated, oldMedia };
+    }, { isolationLevel: "serializable" });
   }
 
   async updatePrice(

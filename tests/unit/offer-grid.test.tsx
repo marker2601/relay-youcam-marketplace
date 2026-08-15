@@ -6,6 +6,8 @@ import { OfferGrid } from "@/components/offers/offer-grid";
 import { OfferProgress } from "@/components/offers/offer-progress";
 import type { OfferSnapshot } from "@/lib/repositories/offer-read";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 const statuses = ["matched", "generating", "ready"] as const;
 
 function snapshot(
@@ -77,7 +79,7 @@ describe("OfferGrid", () => {
     render(<OfferGrid snapshot={snapshot(["ready", "failed", "generating"])} onImageExpired={vi.fn()} />);
     const cards = screen.getAllByRole("article");
 
-    expect(within(cards[0]!).getByRole("link", { name: /request emerald satin midi/i })).toBeVisible();
+    expect(within(cards[0]!).getByRole("button", { name: /request emerald satin midi/i })).toBeVisible();
     expect(within(cards[1]!).getByText("Preview unavailable—garment can still be reviewed")).toBeVisible();
     expect(within(cards[2]!).getByText("Preparing your preview")) .toBeVisible();
   });

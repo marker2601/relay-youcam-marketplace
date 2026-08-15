@@ -1,5 +1,6 @@
 import Image from "next/image";
 
+import { ReserveOfferButton } from "@/components/reservation/reserve-offer-button";
 import type { OfferSnapshotItem } from "@/lib/repositories/offer-read";
 
 const fitDisclaimer =
@@ -116,9 +117,7 @@ export function OfferCard({ offer, onImageExpired }: OfferCardProps) {
 
         <p className="fit-disclaimer">{fitDisclaimer}</p>
         {ready ? (
-          <a className="primary-action offer-action" href={`/offers/${offer.id}/reserve`}>
-            Request {offer.title}
-          </a>
+          <ReserveOfferButton offerId={offer.id} garmentTitle={offer.title} />
         ) : (
           <p className="offer-action-note">
             {failed ? "Review the garment details while the preview is unavailable." : "This card will update automatically."}

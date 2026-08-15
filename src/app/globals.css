@@ -447,13 +447,17 @@ h1 {
 }
 
 .offer-action {
+  width: 100%;
   display: block;
   min-height: 2.75rem;
   padding: 0.8rem 1rem;
+  border: 0;
   border-radius: 999px;
+  font: inherit;
   font-weight: 800;
   text-align: center;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .offer-action-note {
@@ -582,5 +586,347 @@ h1 {
   .generation-notice {
     align-items: start;
     flex-direction: column;
+  }
+}
+
+.provider-shell,
+.reservation-shell {
+  width: min(100% - 2rem, 76rem);
+  margin: 0 auto;
+  padding: clamp(2rem, 6vw, 5rem) 0 6rem;
+}
+
+.provider-hero,
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.provider-hero {
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.provider-hero > div,
+.reservation-shell > header {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.provider-hero h1,
+.reservation-shell h1 {
+  font-size: clamp(2.6rem, 6vw, 5rem);
+}
+
+.provider-primary-link,
+.card-link {
+  padding: 0.8rem 1.1rem;
+  border: 1px solid var(--relay);
+  border-radius: 999px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.provider-section {
+  display: grid;
+  gap: 1rem;
+  padding: 2rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.section-heading h2,
+.decision-panel h2,
+.return-expectations h2,
+.reservation-status-heading h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+  font-weight: 500;
+}
+
+.section-heading span {
+  display: grid;
+  width: 2.4rem;
+  height: 2.4rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ink);
+  color: white;
+  font-weight: 800;
+}
+
+.privacy-note,
+.empty-note {
+  margin: 0;
+  color: #536057;
+  line-height: 1.6;
+}
+
+.provider-request-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+}
+
+.provider-request-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: #fffdf8;
+}
+
+.provider-request-card h3,
+.inventory-row h3 {
+  margin: 0.2rem 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.4rem;
+}
+
+.provider-request-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.provider-request-card dt,
+.reservation-facts dt {
+  color: #68736c;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.provider-request-card dd,
+.reservation-facts dd {
+  margin: 0.15rem 0 0;
+}
+
+.card-link {
+  justify-self: start;
+  color: var(--relay);
+}
+
+.inventory-list {
+  border-top: 1px solid var(--line);
+}
+
+.inventory-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.inventory-row p {
+  margin: 0.25rem 0 0;
+  color: #68736c;
+}
+
+.inventory-row a {
+  color: var(--relay);
+  font-weight: 800;
+}
+
+.listing-form {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: #fffdf8;
+}
+
+.listing-form label,
+.decision-panel label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 700;
+}
+
+.listing-form fieldset {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+
+.listing-form legend {
+  padding: 0 0.4rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+}
+
+.listing-form input,
+.listing-form select,
+.decision-panel input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+}
+
+.listing-form button,
+.decision-panel button {
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.listing-form > button {
+  justify-self: start;
+}
+
+.reservation-shell {
+  display: grid;
+  gap: 2rem;
+}
+
+.reservation-timeline,
+.decision-panel,
+.return-expectations {
+  display: grid;
+  gap: 1.25rem;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: #fffdf8;
+}
+
+.reservation-status-heading {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.timeline-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline-step {
+  display: grid;
+  gap: 0.5rem;
+  color: #7a827d;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.timeline-step span {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+
+.timeline-step--reached {
+  color: var(--ink);
+}
+
+.timeline-step--reached span {
+  border-color: var(--relay);
+  background: var(--relay);
+  color: white;
+}
+
+.reservation-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.simulation-disclosure {
+  margin: 0;
+  padding: 0.75rem;
+  border-left: 3px solid #b78a35;
+  background: #f5ecd8;
+  font-weight: 800;
+}
+
+.decision-panel > p,
+.return-expectations p,
+.decision-complete {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.decision-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.decision-options label {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+
+.danger-action {
+  background: #9b2f20;
+  color: white;
+}
+
+.decision-panel button:disabled,
+.listing-form button:disabled,
+.offer-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.provider-shell :is(a, button, input, select):focus-visible,
+.reservation-shell :is(a, button, input):focus-visible,
+.listing-form :is(button, input, select):focus-visible {
+  outline: 3px solid #d75f4a;
+  outline-offset: 3px;
+}
+
+@media (max-width: 44rem) {
+  .provider-hero,
+  .section-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .inventory-row,
+  .reservation-facts,
+  .decision-options {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-row {
+    align-items: start;
+  }
+
+  .timeline-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-step {
+    grid-template-columns: 2rem 1fr;
+    align-items: center;
   }
 }
