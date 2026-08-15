@@ -481,16 +481,16 @@ npm run db:seed
 - Test: `tests/unit/offer-grid.test.tsx`
 - Test: `tests/integration/offer-read-model.test.ts`
 
-- [ ] Write read-model tests proving offers are score-ordered, never exceed three, include signed original/result URLs only when authorized, and serialize `failed` without leaking normalized upstream detail.
-- [ ] Write component tests for all-matched, generating, one-ready, partial-failure, all-ready, all-failed, expired-image-refresh, and no-match states. Assert screen-reader live-region text changes without replacing the whole page.
-- [ ] Run both focused tests and confirm they fail.
-- [ ] Implement the server page with the first authorized snapshot and a client `OfferProgress` island. While any job is actionable, POST to `process` no faster than every two seconds with exponential UI backoff; then GET offers. Stop on all terminal states or after six minutes and show a manual retry control.
-- [ ] Render each card with generated preview when ready, original garment image, garment title/measurements/size/condition, rental and displayed deposit, provider type, distance band, pickup method, score explanations, and the mandatory fit disclaimer.
-- [ ] Make partial success the normal layout: ready cards are actionable, generating cards retain their positions, and failed cards show the original garment plus `Preview unavailable—garment can still be reviewed` without blocking other cards.
-- [ ] Add no-match controls that prefill the existing brief and PATCH radius, maximum budget, category, or color. The response returns the incremented matching revision; the UI begins polling that revision without requiring another photo upload, while earlier matches remain expired audit records.
-- [ ] When a result image URL expires, GET the offer endpoint to issue a fresh Relay signed URL. Never pass a YouCam result URL to the browser.
-- [ ] Run focused tests, typecheck, lint, and manually verify the layout at 390x844 and 1440x900.
-- [ ] Commit: `feat: present live explainable try-on offers`
+- [x] Write read-model tests proving offers are score-ordered, never exceed three, include signed original/result URLs only when authorized, and serialize `failed` without leaking normalized upstream detail.
+- [x] Write component tests for all-matched, generating, one-ready, partial-failure, all-ready, all-failed, expired-image-refresh, and no-match states. Assert screen-reader live-region text changes without replacing the whole page.
+- [x] Run both focused tests and confirm they fail.
+- [x] Implement the server page with the first authorized snapshot and a client `OfferProgress` island. While any job is actionable, POST to `process` no faster than every two seconds with exponential UI backoff; then GET offers. Stop on all terminal states or after six minutes and show a manual retry control.
+- [x] Render each card with generated preview when ready, original garment image, garment title/measurements/size/condition, rental and displayed deposit, provider type, distance band, pickup method, score explanations, and the mandatory fit disclaimer.
+- [x] Make partial success the normal layout: ready cards are actionable, generating cards retain their positions, and failed cards show the original garment plus `Preview unavailable—garment can still be reviewed` without blocking other cards.
+- [x] Add no-match controls that prefill the existing brief and PATCH radius, maximum budget, category, or color. The response returns the incremented matching revision; the UI begins polling that revision without requiring another photo upload, while earlier matches remain expired audit records.
+- [x] When a result image URL expires, GET the offer endpoint to issue a fresh Relay signed URL. Never pass a YouCam result URL to the browser.
+- [x] Run focused tests, typecheck, lint, and manually verify the layout at 390x844 and 1440x900.
+- [x] Commit: `feat: present live explainable try-on offers`
 
 ## Task 13: Complete provider listings and the reservation handshake
 

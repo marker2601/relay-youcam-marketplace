@@ -7,6 +7,7 @@ import { actorFromRequest } from "@/lib/http/request-auth";
 import { BriefRepository, NotFoundError } from "@/lib/repositories/briefs";
 import { MarketplaceRepository } from "@/lib/repositories/marketplace";
 import { getAuthorizedOfferSnapshot } from "@/lib/repositories/offer-read";
+import type { ObjectStore } from "@/lib/storage/object-store";
 import { S3ObjectStore } from "@/lib/storage/s3-object-store";
 import { FetchResultDownloader, TryOnOrchestrator } from "@/lib/try-on/orchestrator";
 import type { ClothesV3Client } from "@/lib/youcam/client";
@@ -21,6 +22,7 @@ export interface ProcessHandlerOptions {
   db: Database;
   sessionSecret: string;
   orchestrator: BriefAdvancer;
+  objectStore: ObjectStore;
   now?: () => Date;
   lastAdvancedAt?: Map<string, number>;
 }
@@ -57,7 +59,7 @@ export function createBriefProcessHandler(options: ProcessHandlerOptions) {
         options.db,
         actor,
         id.data,
-        new URL(request.url).origin,
+        options.objectStore,
       ),
     );
   };
@@ -97,6 +99,7 @@ export async function POST(
       db: connection.db,
       sessionSecret: env.SESSION_SECRET,
       orchestrator,
+      objectStore,
     });
   }
   return handler(request, context);

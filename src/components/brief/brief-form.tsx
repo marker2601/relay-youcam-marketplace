@@ -280,6 +280,9 @@ export function BriefForm({
       <button className="primary-action" type="submit" disabled={pending}>
         {pending ? "Finding matches…" : "Find my matches"}
       </button>
+      <p className="form-footnote">
+        You can widen the distance, budget, category, or colors later without uploading this photo again.
+      </p>
     </form>
   );
 }

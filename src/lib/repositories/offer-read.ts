@@ -1,15 +1,29 @@
 import { and, asc, desc, eq } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 import type { Actor } from "@/lib/auth/demo-session";
 import type { Database } from "@/lib/db/client";
-import { eventBriefs, listings, matches, offers, tryOnJobs, users } from "@/lib/db/schema";
+import {
+  eventBriefs,
+  listings,
+  matches,
+  mediaObjects,
+  offers,
+  tryOnJobs,
+  users,
+} from "@/lib/db/schema";
 import { NotFoundError } from "@/lib/repositories/briefs";
+import type { ObjectStore } from "@/lib/storage/object-store";
+
+const garmentMedia = alias(mediaObjects, "offer_garment_media");
+const resultMedia = alias(mediaObjects, "offer_result_media");
+const offerUrlTtlSeconds = 5 * 60;
 
 export async function getAuthorizedOfferSnapshot(
   db: Database,
   actor: Actor,
   briefId: string,
-  origin: string,
+  objectStore: ObjectStore,
 ) {
   if (actor.role !== "shopper") throw new NotFoundError();
   const [brief] = await db
@@ -37,8 +51,8 @@ export async function getAuthorizedOfferSnapshot(
       locationBand: listings.locationBand,
       scoreBasisPoints: matches.scoreBasisPoints,
       explanations: matches.explanation,
-      garmentMediaId: listings.garmentMediaId,
-      resultMediaId: tryOnJobs.resultMediaId,
+      garmentObjectKey: garmentMedia.objectKey,
+      resultObjectKey: resultMedia.objectKey,
       expiresAt: offers.expiresAt,
     })
     .from(matches)
@@ -46,6 +60,8 @@ export async function getAuthorizedOfferSnapshot(
     .innerJoin(listings, eq(listings.id, matches.listingId))
     .innerJoin(users, eq(users.id, listings.providerId))
     .innerJoin(tryOnJobs, eq(tryOnJobs.matchId, matches.id))
+    .innerJoin(garmentMedia, eq(garmentMedia.id, listings.garmentMediaId))
+    .leftJoin(resultMedia, eq(resultMedia.id, tryOnJobs.resultMediaId))
     .where(
       and(
         eq(matches.briefId, briefId),
@@ -55,11 +71,8 @@ export async function getAuthorizedOfferSnapshot(
     .orderBy(desc(matches.scoreBasisPoints), asc(matches.listingId))
     .limit(3);
 
-  return {
-    briefId,
-    matchingRevision: brief.revision,
-    briefStatus: brief.status,
-    offers: rows.map((row) => ({
+  const signedOffers = await Promise.all(
+    rows.map(async (row) => ({
       id: row.id,
       listingId: row.listingId,
       status: row.status,
@@ -73,15 +86,31 @@ export async function getAuthorizedOfferSnapshot(
       provider: {
         id: row.providerId,
         displayName: row.providerDisplayName,
-        providerType: row.providerType,
+        providerType: row.providerType!,
       },
       distanceBand: `${row.locationBand} Chicago`,
       pickupMethod: "Local pickup",
       scoreBasisPoints: row.scoreBasisPoints,
       explanations: row.explanations,
-      originalImageUrl: `${origin}/api/media/${row.garmentMediaId}`,
-      resultImageUrl: row.resultMediaId ? `${origin}/api/media/${row.resultMediaId}` : null,
+      originalImageUrl: await objectStore.createReadUrl(
+        row.garmentObjectKey,
+        offerUrlTtlSeconds,
+      ),
+      resultImageUrl:
+        row.status === "ready" && row.resultObjectKey
+          ? await objectStore.createReadUrl(row.resultObjectKey, offerUrlTtlSeconds)
+          : null,
       expiresAt: row.expiresAt.toISOString(),
     })),
+  );
+
+  return {
+    briefId,
+    matchingRevision: brief.revision,
+    briefStatus: brief.status,
+    offers: signedOffers,
   };
 }
+
+export type OfferSnapshot = Awaited<ReturnType<typeof getAuthorizedOfferSnapshot>>;
+export type OfferSnapshotItem = OfferSnapshot["offers"][number];

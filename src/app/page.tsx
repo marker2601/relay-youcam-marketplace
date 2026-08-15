@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { DemoEntryLink } from "@/components/demo-entry-link";
 
 export default function HomePage() {
   return (
@@ -10,12 +10,20 @@ export default function HomePage() {
         boutiques, then uses virtual try-on to make the shortlist tangible.
       </p>
       <nav aria-label="Get started" className="home-actions">
-        <Link className="primary-action" href="/request/new">
+        <DemoEntryLink
+          className="primary-action"
+          href="/request/new"
+          userId="30000000-0000-4000-8000-000000000001"
+        >
           Shop as a guest
-        </Link>
-        <Link className="secondary-action" href="/provider">
+        </DemoEntryLink>
+        <DemoEntryLink
+          className="secondary-action"
+          href="/provider"
+          userId="30000000-0000-4000-8000-000000000004"
+        >
           Supply your closet
-        </Link>
+        </DemoEntryLink>
       </nav>
     </main>
   );
