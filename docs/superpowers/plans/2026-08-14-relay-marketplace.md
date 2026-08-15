@@ -275,14 +275,14 @@ npm run db:seed
 - Create: `docs/assets/attribution.md`
 - Test: `tests/integration/seed.test.ts`
 
-- [ ] Create three original, product-only garment images on a neutral background. Record the creation method, author/tool, date, and permitted use in `docs/assets/attribution.md`; do not download unattributed marketplace photographs.
-- [ ] Write a failing seed test expecting one shopper (`Maya Chen`), three providers (two peers and one boutique), five active listings, and at least three listings that match the canonical wedding-guest brief.
-- [ ] Run `npm run test:integration -- tests/integration/seed.test.ts` and confirm it fails on the empty database.
-- [ ] Implement an idempotent `scripts/seed.ts` using fixed UUIDs and `onConflictDoUpdate`. Seed fictional Chicago location bands `loop`, `west`, and `north`; use only public garment asset paths and never seed a shopper photo.
-- [ ] Seed listing measurements, dates, price, tags, radius, reliability, and provider type so ranking has one clear winner, one style-driven alternative, one budget alternative, and two hard-filtered controls.
-- [ ] Run `npm run db:seed` twice, then rerun the seed test and confirm counts do not increase.
-- [ ] Open the three assets at mobile and desktop sizes and confirm the entire garment is visible with no people, logos, watermark, or unreadable detail.
-- [ ] Commit: `feat: seed Relay demo providers and inventory`
+- [x] Create three original, product-only garment images on a neutral background. Record the creation method, author/tool, date, and permitted use in `docs/assets/attribution.md`; do not download unattributed marketplace photographs.
+- [x] Write a failing seed test expecting one shopper (`Maya Chen`), three providers (two peers and one boutique), five active listings, and at least three listings that match the canonical wedding-guest brief.
+- [x] Run `npm run test:integration -- tests/integration/seed.test.ts` and confirm it fails on the empty database.
+- [x] Implement an idempotent `scripts/seed.ts` using fixed UUIDs and `onConflictDoUpdate`. Seed fictional Chicago location bands `loop`, `west`, and `north`; use only public garment asset paths and never seed a shopper photo.
+- [x] Seed listing measurements, dates, price, tags, radius, reliability, and provider type so ranking has one clear winner, one style-driven alternative, one budget alternative, and two hard-filtered controls.
+- [x] Run `npm run db:seed` twice, then rerun the seed test and confirm counts do not increase.
+- [x] Open the three assets at mobile and desktop sizes and confirm the entire garment is visible with no people, logos, watermark, or unreadable detail.
+- [x] Commit: `feat: seed Relay demo providers and inventory`
 
 ## Task 5: Implement deterministic matching with explanations
 
