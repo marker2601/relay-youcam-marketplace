@@ -458,16 +458,16 @@ npm run db:seed
 - Test: `tests/integration/brief-api.test.ts`
 - Test: `tests/unit/brief-form.test.tsx`
 
-- [ ] Write Route Handler tests for unauthenticated rejection, malformed multipart data, invalid photo, consent false, successful creation, duplicate idempotency key, no matches, and storage/database rollback cleanup.
-- [ ] Run `npm run test:integration -- tests/integration/brief-api.test.ts` and confirm it fails before the route exists.
-- [ ] Implement `POST /api/briefs` as multipart data with `command` JSON and `photo` file. Authenticate shopper, parse command, validate bytes, create the brief ID, store the photo privately, insert the brief/matches/jobs/offers transactionally, and delete the object if the database transaction fails.
-- [ ] Return `201 { briefId, outcome: "matched", matchCount }` or `201 { briefId, outcome: "no_matches", eliminatedBy }`. Calculate `eliminatedBy` by rerunning hard filters independently and return only counts by adjustable constraint.
-- [ ] Implement owner-only `GET /api/briefs/[briefId]`, JSON `PATCH /api/briefs/[briefId]`, multipart `PUT /api/briefs/[briefId]`, `GET .../offers`, and `POST .../process`. PATCH permits only radius, maximum budget, garment category, and preferred colors. PUT replaces only the source photo after validation/consent. Each increments `matchingRevision`, expires unselected earlier offers, and creates new matches/jobs; photo replacement deletes the prior Relay object after the database commit. The process route calls `advanceBrief`, returns only the current revision's offer read models, and rate-limits each brief to one advance per two seconds.
-- [ ] Write component tests for required fields, inline validation, photo preview/removal, affirmative consent, disabled submit while pending, preservation of all non-photo fields after an invalid image, and redirect to the returned brief.
-- [ ] Implement a three-section form: `Your event`, `Your measurements`, and `Your photo`. Fields are event type/date, dress code, budget min/max, category, size label, bust/waist/hips, desired ease, location band/radius, preferred colors, style tags, exclusions, image, and consent.
-- [ ] Put the official capture requirements next to the file input: JPEG/PNG, under 10 MB, at least 512x384, one forward-facing adult, face and intended clothing area visible, and person occupying most of the frame. Say that automatic person/composition validation happens at YouCam and may require a replacement photo.
-- [ ] Run the focused integration/component tests, typecheck, and lint; confirm all pass.
-- [ ] Commit: `feat: create recoverable shopper event briefs`
+- [x] Write Route Handler tests for unauthenticated rejection, malformed multipart data, invalid photo, consent false, successful creation, duplicate idempotency key, no matches, and storage/database rollback cleanup.
+- [x] Run `npm run test:integration -- tests/integration/brief-api.test.ts` and confirm it fails before the route exists.
+- [x] Implement `POST /api/briefs` as multipart data with `command` JSON and `photo` file. Authenticate shopper, parse command, validate bytes, create the brief ID, store the photo privately, insert the brief/matches/jobs/offers transactionally, and delete the object if the database transaction fails.
+- [x] Return `201 { briefId, outcome: "matched", matchCount }` or `201 { briefId, outcome: "no_matches", eliminatedBy }`. Calculate `eliminatedBy` by rerunning hard filters independently and return only counts by adjustable constraint.
+- [x] Implement owner-only `GET /api/briefs/[briefId]`, JSON `PATCH /api/briefs/[briefId]`, multipart `PUT /api/briefs/[briefId]`, `GET .../offers`, and `POST .../process`. PATCH permits only radius, maximum budget, garment category, and preferred colors. PUT replaces only the source photo after validation/consent. Each increments `matchingRevision`, expires unselected earlier offers, and creates new matches/jobs; photo replacement deletes the prior Relay object after the database commit. The process route calls `advanceBrief`, returns only the current revision's offer read models, and rate-limits each brief to one advance per two seconds.
+- [x] Write component tests for required fields, inline validation, photo preview/removal, affirmative consent, disabled submit while pending, preservation of all non-photo fields after an invalid image, and redirect to the returned brief.
+- [x] Implement a three-section form: `Your event`, `Your measurements`, and `Your photo`. Fields are event type/date, dress code, budget min/max, category, size label, bust/waist/hips, desired ease, location band/radius, preferred colors, style tags, exclusions, image, and consent.
+- [x] Put the official capture requirements next to the file input: JPEG/PNG, under 10 MB, at least 512x384, one forward-facing adult, face and intended clothing area visible, and person occupying most of the frame. Say that automatic person/composition validation happens at YouCam and may require a replacement photo.
+- [x] Run the focused integration/component tests, typecheck, and lint; confirm all pass.
+- [x] Commit: `feat: create recoverable shopper event briefs`
 
 ## Task 12: Render live offer progress, comparison, and no-match recovery
 

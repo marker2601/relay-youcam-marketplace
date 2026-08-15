@@ -82,3 +82,125 @@ h1 {
   outline: 3px solid #d75f4a;
   outline-offset: 3px;
 }
+
+.request-shell {
+  width: min(100% - 2rem, 72rem);
+  margin: 0 auto;
+  padding: 3rem 0 6rem;
+}
+
+.request-shell > header {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.request-shell h1 {
+  font-size: clamp(2.5rem, 7vw, 5.5rem);
+}
+
+.brief-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.brief-form section {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, white 68%, var(--paper));
+}
+
+.brief-form h2,
+.image-guidance h3 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.brief-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 700;
+}
+
+.brief-form input,
+.brief-form select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+}
+
+.brief-form input:focus-visible,
+.brief-form select:focus-visible,
+.brief-form button:focus-visible {
+  outline: 3px solid #d75f4a;
+  outline-offset: 2px;
+}
+
+.field-row {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.image-guidance {
+  padding: 1rem;
+  border-left: 4px solid var(--relay);
+  background: #edf5f0;
+  line-height: 1.5;
+}
+
+.image-guidance ul,
+.image-guidance p {
+  margin-bottom: 0;
+}
+
+.photo-selection,
+.consent-row {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.consent-row {
+  justify-content: flex-start;
+}
+
+.consent-row input {
+  width: 1.2rem;
+  min-height: 1.2rem;
+}
+
+.brief-form button {
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--relay);
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.brief-form > button {
+  justify-self: start;
+}
+
+.brief-form button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.field-error,
+.form-error {
+  margin: -0.4rem 0 0;
+  color: #9b2f20;
+  font-weight: 700;
+}
