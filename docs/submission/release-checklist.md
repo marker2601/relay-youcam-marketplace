@@ -47,7 +47,7 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 - [x] Primary decline followed by visible **Backup available**.
 - [x] Backup provider acceptance followed by **Event ready**.
 - [x] Submission thumbnail derived from project-owned assets.
-- [x] Public 2:25 1080p YouTube demo showing and explaining YouCam: https://youtu.be/rtxc3_vG1a8.
+- [x] Public 2:21 1080p professional YouTube demo showing and explaining YouCam: https://youtu.be/K_iLJKMcykg.
 - [x] Unauthenticated fetch verifies the final video URL is public.
 
 Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
@@ -59,8 +59,8 @@ Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 - [x] Product description, API surprise, underexplored use case, and technical wall are drafted truthfully.
 - [x] Project start date derived from git history: August 14, 2026.
 - [x] App status is documented as an existing Relay prototype with a major Rescue update begun August 16, 2026.
-- [ ] User supplies submitter type.
-- [ ] User supplies country of residence.
+- [x] Submitter type supplied: Individual.
+- [x] Country of residence supplied: United States.
 - [x] Add final screenshots, thumbnail, and public video URL.
 - [x] Confirm repository visibility or judge access.
 - [x] Confirm the exact submitted copy contains no guarantees or unimplemented retailer-return claim.
@@ -74,7 +74,7 @@ Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 | Technological implementation | Typed Clothes v3 adapter; persisted jobs and private copy; stable assurance roles; bounded readiness; transactional expiry and idempotent failover; deterministic recovery E2E. | Local, CI, production smoke, and real YouCam path passed |
 | Coherent design | One visible promise connects the brief, primary/backup plan, provider deadline, recovery, and **Event ready** outcome. | Implemented and uploaded with four production screenshots |
 | Potential impact | Bounded occasionwear wedge, independent-provider resilience, 18% commission hypothesis, measurable conversion and completion outcomes. | Copy ready; market validation remains a hypothesis |
-| Quality/non-obviousness | YouCam is the visual trust layer inside a demand-first, failure-tolerant two-sided marketplace rather than a catalog widget. | Implemented; public 2:25 video proof live |
+| Quality/non-obviousness | YouCam is the visual trust layer inside a demand-first, failure-tolerant two-sided marketplace rather than a catalog widget. | Implemented; public 2:21 professional video proof live |
 
 ## Exact local release commands
 

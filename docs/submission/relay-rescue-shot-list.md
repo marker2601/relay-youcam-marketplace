@@ -57,4 +57,4 @@ Use project-owned visuals only. Place the Relay wordmark and short line **Primar
 - `docs/submission/assets/03-primary-declined-backup-available.png`
 - `docs/submission/assets/04-backup-accepted-event-ready.png`
 - `docs/submission/assets/relay-rescue-thumbnail.png`
-- `docs/submission/assets/relay-rescue-demo.mp4`
+- `docs/submission/assets/relay-professional-demo.mp4`

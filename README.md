@@ -9,7 +9,7 @@ The business thesis is that virtual try-on is more valuable as a transaction tru
 ## Judge links
 
 - Production: https://relay-youcam-marketplace.vercel.app
-- Public 2:25 demo: https://youtu.be/rtxc3_vG1a8
+- Public 2:21 professional demo: https://youtu.be/K_iLJKMcykg
 - Devpost project: https://devpost.com/software/relay-xr7byl
 - Production evidence and submission assets: [`docs/submission/`](docs/submission/)
 
