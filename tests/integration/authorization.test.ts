@@ -7,12 +7,14 @@ import {
   matches,
   mediaObjects,
   offers,
+  reservations,
   users,
 } from "@/lib/db/schema";
 import type { Actor } from "@/lib/auth/demo-session";
 import type { TenthsCm } from "@/lib/domain/contracts";
 import { BriefRepository, NotFoundError } from "@/lib/repositories/briefs";
 import { ListingRepository } from "@/lib/repositories/listings";
+import { ReservationRepository } from "@/lib/repositories/reservations";
 import { createDemoSessionPostHandler } from "@/app/api/demo/session/route";
 import { seedIds, seedRelay } from "../../scripts/seed";
 import {
@@ -28,6 +30,7 @@ const shopperBMediaId = "60000000-0000-4000-8000-000000000002";
 const shopperBBriefId = "60000000-0000-4000-8000-000000000003";
 const priyaMatchId = "60000000-0000-4000-8000-000000000004";
 const priyaOfferId = "60000000-0000-4000-8000-000000000005";
+const priyaReservationId = "60000000-0000-4000-8000-000000000006";
 
 const shopperA: Actor = { userId: seedIds.shopper, role: "shopper" };
 const shopperB: Actor = { userId: shopperBId, role: "shopper" };
@@ -214,5 +217,34 @@ describe("authorized repositories", () => {
     expect(serialized).not.toContain("shopperMediaId");
     expect(serialized).not.toContain("measurementProfile");
     await expect(repository.listRequests(providerA)).resolves.toEqual([]);
+  });
+
+  it("hides another shopper's reservation during backup activation", async () => {
+    await testDb.update(offers).set({ status: "declined" }).where(eq(offers.id, priyaOfferId));
+    await testDb.insert(reservations).values({
+      id: priyaReservationId,
+      offerId: priyaOfferId,
+      briefId: shopperBBriefId,
+      shopperId: shopperBId,
+      providerId: seedIds.peerPriya,
+      eventDate: new Date("2026-09-20T17:00:00.000Z"),
+      pickupDate: new Date("2026-09-19T17:00:00.000Z"),
+      returnDate: new Date("2026-09-21T17:00:00.000Z"),
+      rentalPriceCents: 7_200,
+      depositDisplayCents: 3_000,
+      status: "cancelled",
+      responseDueAt: new Date("2026-08-15T13:00:00.000Z"),
+      createdAt: new Date("2026-08-15T12:00:00.000Z"),
+    });
+
+    await expect(
+      new ReservationRepository(testDb).activateBackup(
+        shopperA,
+        priyaReservationId,
+        "activate-foreign-001",
+        new Date("2026-08-15T14:00:00.000Z"),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(await testDb.select().from(reservations)).toHaveLength(1);
   });
 });

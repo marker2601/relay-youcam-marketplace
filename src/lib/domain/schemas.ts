@@ -172,6 +172,11 @@ export const acceptReservationCommandSchema = z.strictObject({
   idempotencyKey: z.string().trim().min(8).max(128),
 });
 
+export const activateBackupCommandSchema = z.strictObject({
+  reservationId: z.uuid(),
+  idempotencyKey: z.string().trim().min(8).max(128),
+});
+
 export const offerSnapshotItemSchema = z.strictObject({
   id: z.uuid(),
   listingId: z.uuid(),
@@ -286,6 +291,7 @@ export type CreateBriefCommand = z.infer<typeof createBriefCommandSchema>;
 export type CreateListingCommand = z.infer<typeof createListingCommandSchema>;
 export type RequestReservationCommand = z.infer<typeof requestReservationCommandSchema>;
 export type AcceptReservationCommand = z.infer<typeof acceptReservationCommandSchema>;
+export type ActivateBackupCommand = z.infer<typeof activateBackupCommandSchema>;
 export type OfferSnapshotResponse = z.infer<typeof offerSnapshotSchema>;
 export type OfferCardResponse = z.infer<typeof offerCardSchema>;
 export type ProviderRequestResponse = z.infer<typeof providerRequestSchema>;

@@ -1,7 +1,7 @@
 import { eq, ne } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { eventBriefs, mediaObjects, offers, reservations, tryOnJobs } from "@/lib/db/schema";
+import { eventBriefs, matches, mediaObjects, offers, reservations, tryOnJobs } from "@/lib/db/schema";
 import type { Actor } from "@/lib/auth/demo-session";
 import type { TenthsCm } from "@/lib/domain/contracts";
 import {
@@ -25,6 +25,9 @@ import {
 const cm = (value: number) => value as TenthsCm;
 const briefId = "52000000-0000-4000-8000-000000000001";
 const sourceMediaId = "52000000-0000-4000-8000-000000000002";
+const crossBriefId = "52000000-0000-4000-8000-000000000003";
+const crossMatchId = "52000000-0000-4000-8000-000000000004";
+const crossOfferId = "52000000-0000-4000-8000-000000000005";
 const now = new Date("2026-08-15T12:00:00.000Z");
 const shopper: Actor = { userId: seedIds.shopper, role: "shopper" };
 const boutique: Actor = { userId: seedIds.boutique, role: "provider" };
@@ -77,13 +80,11 @@ beforeEach(async () => {
     idempotencyKey: "reservation-flow-graph",
     now,
   });
-  await testDb.update(offers).set({ status: "generating" });
-  await testDb.update(tryOnJobs).set({ status: "processing" });
-  await testDb.update(offers).set({ status: "ready" }).where(eq(offers.id, graph.offerIds[0]!));
+  await testDb.update(offers).set({ status: "ready" });
   await testDb
     .update(tryOnJobs)
     .set({ status: "succeeded", completedAt: now })
-    .where(eq(tryOnJobs.id, graph.jobIds[0]!));
+    .where(ne(tryOnJobs.status, "succeeded"));
 });
 afterAll(closeTestDatabase);
 
@@ -146,44 +147,259 @@ describe("provider listing versions", () => {
 });
 
 describe("reservation selection and provider decision", () => {
-  it("selects one ready offer idempotently and expires all competing current-revision work", async () => {
+  it("preserves the designated backup while expiring only alternatives", async () => {
     const repository = new ReservationRepository(testDb);
-    const selected = await repository.request(shopper, graph.offerIds[0]!, "reserve-once-001", now);
-    const repeated = await repository.request(shopper, graph.offerIds[0]!, "reserve-once-001", now);
+    const primaryOfferId = graph.offerIds[0]!;
+    const backupOfferId = graph.offerIds[1]!;
+    const alternativeOfferId = graph.offerIds[2]!;
+    const selected = await repository.request(shopper, primaryOfferId, "primary-request-001", now);
+    const repeated = await repository.request(shopper, primaryOfferId, "primary-request-001", now);
 
     expect(repeated).toEqual(selected);
     expect(selected).toMatchObject({
-      offerId: graph.offerIds[0],
+      offerId: primaryOfferId,
       status: "requested",
       eventDate: "2026-09-20",
       pickupDate: "2026-09-19T17:00:00.000Z",
       returnDate: "2026-09-21T17:00:00.000Z",
+      responseDueAt: "2026-08-15T16:00:00.000Z",
+      backupOfferId,
+      supersedesReservationId: null,
       simulation: true,
     });
     const persistedReservations = await testDb.select().from(reservations);
     expect(persistedReservations).toHaveLength(1);
     expect(persistedReservations[0]).toMatchObject({
       responseDueAt: new Date("2026-08-15T16:00:00.000Z"),
-      backupOfferId: null,
+      backupOfferId,
       supersedesReservationId: null,
     });
 
-    const chosen = await testDb.select().from(offers).where(eq(offers.id, graph.offerIds[0]!));
-    const competing = await testDb
-      .select()
-      .from(offers)
-      .where(ne(offers.id, graph.offerIds[0]!));
-    expect(chosen[0]!.status).toBe("reservation_requested");
-    expect(competing.every((offer) => offer.status === "expired")).toBe(true);
-    const stoppedJobs = await testDb
-      .select()
-      .from(tryOnJobs)
-      .where(ne(tryOnJobs.id, graph.jobIds[0]!));
-    expect(stoppedJobs.every((job) => job.status === "failed" && job.normalizedErrorCode === "superseded")).toBe(true);
+    expect(
+      (await testDb.select().from(offers).where(eq(offers.id, primaryOfferId)))[0]!.status,
+    ).toBe("reservation_requested");
+    expect(
+      (await testDb.select().from(offers).where(eq(offers.id, backupOfferId)))[0]!.status,
+    ).toBe("ready");
+    expect(
+      (await testDb.select().from(offers).where(eq(offers.id, alternativeOfferId)))[0]!.status,
+    ).toBe("expired");
+    expect(
+      (await testDb.select().from(tryOnJobs).where(eq(tryOnJobs.id, graph.jobIds[1]!)))[0],
+    ).toMatchObject({ status: "succeeded", normalizedErrorCode: null });
 
     await expect(
       repository.request(shopper, graph.offerIds[1]!, "reserve-second-001", now),
     ).rejects.toBeInstanceOf(ReservationConflictError);
+  });
+
+  it("requires the initial selected offer to be the primary", async () => {
+    await expect(
+      new ReservationRepository(testDb).request(
+        shopper,
+        graph.offerIds[1]!,
+        "backup-first-001",
+        now,
+      ),
+    ).rejects.toBeInstanceOf(ReservationConflictError);
+
+    expect(await testDb.select().from(reservations)).toHaveLength(0);
+  });
+
+  it("activates one backup only after primary decline and repeats the same response concurrently", async () => {
+    const repository = new ReservationRepository(testDb);
+    const primary = await repository.request(
+      shopper,
+      graph.offerIds[0]!,
+      "primary-request-002",
+      now,
+    );
+    await repository.decide(boutique, primary.id, "decline", "decline-primary-002", now);
+
+    const [first, concurrent] = await Promise.all([
+      repository.activateBackup(shopper, primary.id, "activate-backup-002", now),
+      repository.activateBackup(shopper, primary.id, "activate-backup-002", now),
+    ]);
+    const repeated = await repository.activateBackup(
+      shopper,
+      primary.id,
+      "activate-backup-002",
+      now,
+    );
+
+    expect(concurrent.id).toBe(first.id);
+    expect(repeated.id).toBe(first.id);
+    expect(first).toMatchObject({
+      offerId: graph.offerIds[1],
+      status: "requested",
+      backupOfferId: null,
+      supersedesReservationId: primary.id,
+    });
+    expect(await testDb.select().from(reservations)).toHaveLength(2);
+  });
+
+  it("rejects backup activation before primary decline or expiry", async () => {
+    const repository = new ReservationRepository(testDb);
+    const primary = await repository.request(
+      shopper,
+      graph.offerIds[0]!,
+      "primary-request-early",
+      now,
+    );
+
+    await expect(
+      repository.activateBackup(shopper, primary.id, "activate-too-early", now),
+    ).rejects.toBeInstanceOf(ReservationConflictError);
+    expect(await testDb.select().from(reservations)).toHaveLength(1);
+  });
+
+  it("rejects a second active backup when the idempotency key differs", async () => {
+    const repository = new ReservationRepository(testDb);
+    const primary = await repository.request(
+      shopper,
+      graph.offerIds[0]!,
+      "primary-request-second",
+      now,
+    );
+    await repository.decide(boutique, primary.id, "decline", "decline-primary-second", now);
+    await repository.activateBackup(shopper, primary.id, "activate-backup-first", now);
+
+    await expect(
+      repository.activateBackup(shopper, primary.id, "activate-backup-second", now),
+    ).rejects.toBeInstanceOf(ReservationConflictError);
+    expect(await testDb.select().from(reservations)).toHaveLength(2);
+  });
+
+  it("rejects a designated backup that belongs to a different brief", async () => {
+    const repository = new ReservationRepository(testDb);
+    const primary = await repository.request(
+      shopper,
+      graph.offerIds[0]!,
+      "primary-request-cross",
+      now,
+    );
+    await repository.decide(boutique, primary.id, "decline", "decline-primary-cross", now);
+    await testDb.insert(eventBriefs).values({
+      id: crossBriefId,
+      shopperId: seedIds.shopper,
+      eventType: "gala",
+      eventDate: "2026-09-25",
+      eventStartsAt: new Date("2026-09-26T00:00:00.000Z"),
+      dressCode: "formal",
+      budgetMinCents: 5_000,
+      budgetMaxCents: 12_000,
+      garmentCategory: "full_body",
+      sizeLabel: "M",
+      measurementProfile: {
+        bustTenthsCm: cm(900),
+        waistTenthsCm: cm(720),
+        hipsTenthsCm: cm(980),
+        desiredEaseMinTenthsCm: cm(20),
+        desiredEaseMaxTenthsCm: cm(120),
+      },
+      locationBand: "west",
+      radiusMiles: 15,
+      preferredColors: ["burgundy"],
+      styleTags: ["statement"],
+      exclusions: [],
+      photoConsentAt: now,
+    });
+    await testDb.insert(matches).values({
+      id: crossMatchId,
+      briefId: crossBriefId,
+      listingId: seedIds.burgundyListing,
+      briefRevision: 1,
+      listingVersion: 1,
+      scoreBasisPoints: 8_000,
+      scoreBreakdown: { measurement: 3_000 },
+      explanation: ["Matches formal dress code"],
+    });
+    await testDb.insert(offers).values({
+      id: crossOfferId,
+      matchId: crossMatchId,
+      status: "ready",
+      assuranceRole: "backup",
+      expiresAt: new Date("2026-09-24T12:00:00.000Z"),
+    });
+    await testDb
+      .update(reservations)
+      .set({ backupOfferId: crossOfferId })
+      .where(eq(reservations.id, primary.id));
+
+    await expect(
+      repository.activateBackup(shopper, primary.id, "activate-cross-brief", now),
+    ).rejects.toBeInstanceOf(ReservationConflictError);
+    expect(await testDb.select().from(reservations)).toHaveLength(1);
+  });
+
+  it("expires an overdue provider request before acceptance", async () => {
+    await testDb
+      .update(eventBriefs)
+      .set({ eventStartsAt: new Date("2026-08-16T12:00:00.000Z") })
+      .where(eq(eventBriefs.id, briefId));
+    const repository = new ReservationRepository(testDb);
+    const primary = await repository.request(
+      shopper,
+      graph.offerIds[0]!,
+      "primary-request-003",
+      now,
+    );
+
+    expect(primary.responseDueAt).toBe("2026-08-15T13:00:00.000Z");
+    await expect(
+      repository.decide(
+        boutique,
+        primary.id,
+        "accept",
+        "late-accept-003",
+        new Date(primary.responseDueAt),
+      ),
+    ).rejects.toBeInstanceOf(ReservationConflictError);
+    expect(
+      (await testDb.select().from(reservations).where(eq(reservations.id, primary.id)))[0]!.status,
+    ).toBe("cancelled");
+    expect(
+      (await testDb.select().from(offers).where(eq(offers.id, primary.offerId)))[0]!.status,
+    ).toBe("expired");
+  });
+
+  it("reconciles an overdue request before returning reservation detail", async () => {
+    await testDb
+      .update(eventBriefs)
+      .set({ eventStartsAt: new Date("2026-08-16T12:00:00.000Z") })
+      .where(eq(eventBriefs.id, briefId));
+    const repository = new ReservationRepository(testDb);
+    const primary = await repository.request(shopper, graph.offerIds[0]!, "primary-read-004", now);
+
+    const detail = await repository.getDetail(
+      shopper,
+      primary.id,
+      new Date(primary.responseDueAt),
+    );
+
+    expect(detail.status).toBe("cancelled");
+    expect(
+      (await testDb.select().from(offers).where(eq(offers.id, primary.offerId)))[0]!.status,
+    ).toBe("expired");
+  });
+
+  it("reconciles overdue requests before listing provider work", async () => {
+    await testDb
+      .update(eventBriefs)
+      .set({ eventStartsAt: new Date("2026-08-16T12:00:00.000Z") })
+      .where(eq(eventBriefs.id, briefId));
+    const repository = new ReservationRepository(testDb);
+    const primary = await repository.request(shopper, graph.offerIds[0]!, "primary-list-005", now);
+
+    const requests = await repository.listProviderRequests(
+      boutique,
+      new Date(primary.responseDueAt),
+    );
+
+    expect(requests).toEqual([]);
+    expect(
+      (await testDb.select().from(reservations).where(eq(reservations.id, primary.id)))[0]!.status,
+    ).toBe("cancelled");
   });
 
   it("allows only the selected listing provider to accept exactly once", async () => {

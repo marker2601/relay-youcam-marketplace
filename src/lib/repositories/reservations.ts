@@ -1,4 +1,4 @@
-import { and, eq, inArray, ne, or } from "drizzle-orm";
+import { and, eq, inArray, lte, ne, or } from "drizzle-orm";
 
 import type { Actor } from "@/lib/auth/demo-session";
 import type { Database } from "@/lib/db/client";
@@ -12,6 +12,7 @@ import {
   tryOnJobs,
   users,
 } from "@/lib/db/schema";
+import { classifyEventUrgency, responseWindowMs } from "@/lib/domain/assurance";
 import { transitionOffer, transitionReservation } from "@/lib/domain/state-machines";
 import { NotFoundError } from "@/lib/repositories/briefs";
 
@@ -34,6 +35,9 @@ export interface ReservationDetail {
   returnDate: string;
   rentalPriceCents: number;
   depositDisplayCents: number;
+  responseDueAt: string;
+  backupOfferId: string | null;
+  supersedesReservationId: string | null;
   simulation: true;
 }
 
@@ -83,42 +87,99 @@ function chicagoNoon(dateOnly: string): Date {
   return new Date(desired + (desired - observedAsUtc));
 }
 
+function isSerializationFailure(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "40001";
+}
+
+async function retrySerializable<T>(operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt >= 2 || !isSerializationFailure(error)) throw error;
+    }
+  }
+}
+
 export class ReservationRepository {
   constructor(private readonly db: Database) {}
 
-  async getDetail(actor: Actor, reservationId: string): Promise<ReservationDetail> {
+  async getDetail(
+    actor: Actor,
+    reservationId: string,
+    now = new Date(),
+  ): Promise<ReservationDetail> {
     const ownership =
       actor.role === "shopper"
         ? eq(reservations.shopperId, actor.userId)
         : eq(reservations.providerId, actor.userId);
-    const [row] = await this.db
-      .select({
-        id: reservations.id,
-        offerId: reservations.offerId,
-        status: reservations.status,
-        garmentTitle: listings.title,
-        providerDisplayName: users.displayName,
-        providerType: users.providerType,
-        eventDate: eventBriefs.eventDate,
-        pickupDate: reservations.pickupDate,
-        returnDate: reservations.returnDate,
-        rentalPriceCents: reservations.rentalPriceCents,
-        depositDisplayCents: reservations.depositDisplayCents,
-      })
-      .from(reservations)
-      .innerJoin(offers, eq(offers.id, reservations.offerId))
-      .innerJoin(matches, eq(matches.id, offers.matchId))
-      .innerJoin(listings, eq(listings.id, matches.listingId))
-      .innerJoin(users, eq(users.id, listings.providerId))
-      .innerJoin(eventBriefs, eq(eventBriefs.id, reservations.briefId))
-      .where(and(eq(reservations.id, reservationId), ownership))
-      .limit(1);
+    const row = await this.db.transaction(async (transaction) => {
+      const [selected] = await transaction
+        .select({
+          id: reservations.id,
+          offerId: reservations.offerId,
+          status: reservations.status,
+          offerStatus: offers.status,
+          garmentTitle: listings.title,
+          providerDisplayName: users.displayName,
+          providerType: users.providerType,
+          eventDate: eventBriefs.eventDate,
+          pickupDate: reservations.pickupDate,
+          returnDate: reservations.returnDate,
+          rentalPriceCents: reservations.rentalPriceCents,
+          depositDisplayCents: reservations.depositDisplayCents,
+          responseDueAt: reservations.responseDueAt,
+          backupOfferId: reservations.backupOfferId,
+          supersedesReservationId: reservations.supersedesReservationId,
+        })
+        .from(reservations)
+        .innerJoin(offers, eq(offers.id, reservations.offerId))
+        .innerJoin(matches, eq(matches.id, offers.matchId))
+        .innerJoin(listings, eq(listings.id, matches.listingId))
+        .innerJoin(users, eq(users.id, listings.providerId))
+        .innerJoin(eventBriefs, eq(eventBriefs.id, reservations.briefId))
+        .where(and(eq(reservations.id, reservationId), ownership))
+        .limit(1)
+        .for("update", { of: reservations });
+      if (
+        selected?.status === "requested" &&
+        selected.responseDueAt.getTime() <= now.getTime()
+      ) {
+        transitionReservation(selected.status, "cancelled");
+        transitionOffer(selected.offerStatus, "expired");
+        await transaction
+          .update(reservations)
+          .set({ status: "cancelled" })
+          .where(and(eq(reservations.id, selected.id), eq(reservations.status, "requested")));
+        await transaction
+          .update(offers)
+          .set({ status: "expired" })
+          .where(
+            and(
+              eq(offers.id, selected.offerId),
+              eq(offers.status, "reservation_requested"),
+            ),
+          );
+        return { ...selected, status: "cancelled" as const, offerStatus: "expired" as const };
+      }
+      return selected;
+    });
     if (!row || !row.providerType) throw new NotFoundError();
     return {
-      ...row,
+      id: row.id,
+      offerId: row.offerId,
+      status: row.status,
+      garmentTitle: row.garmentTitle,
+      providerDisplayName: row.providerDisplayName,
       providerType: row.providerType,
+      eventDate: row.eventDate,
       pickupDate: row.pickupDate.toISOString(),
       returnDate: row.returnDate.toISOString(),
+      rentalPriceCents: row.rentalPriceCents,
+      depositDisplayCents: row.depositDisplayCents,
+      responseDueAt: row.responseDueAt.toISOString(),
+      backupOfferId: row.backupOfferId,
+      supersedesReservationId: row.supersedesReservationId,
       simulation: true,
     };
   }
@@ -136,10 +197,12 @@ export class ReservationRepository {
         .select({
           offerId: offers.id,
           offerStatus: offers.status,
+          assuranceRole: offers.assuranceRole,
           matchId: matches.id,
           briefId: eventBriefs.id,
           briefRevision: eventBriefs.matchingRevision,
           eventDate: eventBriefs.eventDate,
+          eventStartsAt: eventBriefs.eventStartsAt,
           providerId: listings.providerId,
           rentalPriceCents: listings.rentalPriceCents,
           depositDisplayCents: listings.depositDisplayCents,
@@ -181,11 +244,31 @@ export class ReservationRepository {
       if (candidate.offerStatus !== "ready") {
         throw new ReservationConflictError("Only a ready offer can be requested");
       }
+      if (candidate.assuranceRole !== "primary") {
+        throw new ReservationConflictError("Only the primary offer can be requested first");
+      }
       transitionOffer(candidate.offerStatus, "reservation_requested");
+
+      const [backup] = await transaction
+        .select({ id: offers.id })
+        .from(offers)
+        .innerJoin(matches, eq(matches.id, offers.matchId))
+        .where(
+          and(
+            eq(matches.briefId, candidate.briefId),
+            eq(matches.briefRevision, candidate.briefRevision),
+            eq(offers.assuranceRole, "backup"),
+            eq(offers.status, "ready"),
+            ne(offers.id, offerId),
+          ),
+        )
+        .limit(1)
+        .for("update", { of: offers });
 
       const pickupDate = chicagoNoon(addCalendarDays(candidate.eventDate, -1));
       const eventDate = chicagoNoon(candidate.eventDate);
       const returnDate = chicagoNoon(addCalendarDays(candidate.eventDate, 1));
+      const urgency = classifyEventUrgency(candidate.eventStartsAt, now);
       const [created] = await transaction
         .insert(reservations)
         .values({
@@ -199,8 +282,8 @@ export class ReservationRepository {
           rentalPriceCents: candidate.rentalPriceCents,
           depositDisplayCents: candidate.depositDisplayCents,
           status: "requested",
-          responseDueAt: new Date(now.getTime() + 4 * 60 * 60_000),
-          backupOfferId: null,
+          responseDueAt: new Date(now.getTime() + responseWindowMs(urgency)),
+          backupOfferId: backup?.id ?? null,
           supersedesReservationId: null,
           createdAt: now,
         })
@@ -213,11 +296,13 @@ export class ReservationRepository {
       const competingMatches = await transaction
         .select({ id: matches.id })
         .from(matches)
+        .innerJoin(offers, eq(offers.matchId, matches.id))
         .where(
           and(
             eq(matches.briefId, candidate.briefId),
             eq(matches.briefRevision, candidate.briefRevision),
             ne(matches.id, candidate.matchId),
+            eq(offers.assuranceRole, "alternative"),
           ),
         );
       if (competingMatches.length > 0) {
@@ -259,7 +344,7 @@ export class ReservationRepository {
       return created!.id;
     }, { isolationLevel: "serializable" });
 
-    return this.getDetail(actor, reservationId);
+    return this.getDetail(actor, reservationId, now);
   }
 
   async decide(
@@ -270,10 +355,11 @@ export class ReservationRepository {
     now: Date,
   ): Promise<ReservationDetail> {
     if (actor.role !== "provider") throw new NotFoundError();
-    await this.db.transaction(async (transaction) => {
+    const outcome = await this.db.transaction(async (transaction) => {
       const [request] = await transaction
         .select({
           reservationStatus: reservations.status,
+          responseDueAt: reservations.responseDueAt,
           offerId: offers.id,
           offerStatus: offers.status,
         })
@@ -286,13 +372,32 @@ export class ReservationRepository {
         .for("update", { of: reservations });
       if (!request) throw new NotFoundError();
 
+      if (
+        request.reservationStatus === "requested" &&
+        request.responseDueAt.getTime() <= now.getTime()
+      ) {
+        transitionReservation(request.reservationStatus, "cancelled");
+        transitionOffer(request.offerStatus, "expired");
+        await transaction
+          .update(reservations)
+          .set({ status: "cancelled" })
+          .where(and(eq(reservations.id, reservationId), eq(reservations.status, "requested")));
+        await transaction
+          .update(offers)
+          .set({ status: "expired" })
+          .where(
+            and(eq(offers.id, request.offerId), eq(offers.status, "reservation_requested")),
+          );
+        return "timed_out" as const;
+      }
+
       const targetReservation = decision === "accept" ? "confirmed" : "cancelled";
       const targetOffer = decision === "accept" ? "accepted" : "declined";
       if (
         request.reservationStatus === targetReservation &&
         request.offerStatus === targetOffer
       ) {
-        return;
+        return "decided" as const;
       }
       if (
         request.reservationStatus !== "requested" ||
@@ -320,12 +425,212 @@ export class ReservationRepository {
           createdAt: now,
         })
         .onConflictDoNothing();
+      return "decided" as const;
     }, { isolationLevel: "serializable" });
-    return this.getDetail(actor, reservationId);
+    if (outcome === "timed_out") {
+      throw new ReservationConflictError("The provider response window has expired");
+    }
+    return this.getDetail(actor, reservationId, now);
   }
 
-  async listProviderRequests(actor: Actor): Promise<ProviderReservationRequest[]> {
+  async activateBackup(
+    actor: Actor,
+    reservationId: string,
+    idempotencyKey: string,
+    now: Date,
+  ): Promise<ReservationDetail> {
+    if (actor.role !== "shopper") throw new NotFoundError();
+
+    const activatedReservationId = await retrySerializable(() =>
+      this.db.transaction(async (transaction) => {
+        const [original] = await transaction
+          .select({
+            id: reservations.id,
+            status: reservations.status,
+            responseDueAt: reservations.responseDueAt,
+            offerId: reservations.offerId,
+            offerStatus: offers.status,
+            backupOfferId: reservations.backupOfferId,
+            briefId: reservations.briefId,
+            eventDate: reservations.eventDate,
+            pickupDate: reservations.pickupDate,
+            returnDate: reservations.returnDate,
+            eventStartsAt: eventBriefs.eventStartsAt,
+          })
+          .from(reservations)
+          .innerJoin(offers, eq(offers.id, reservations.offerId))
+          .innerJoin(eventBriefs, eq(eventBriefs.id, reservations.briefId))
+          .where(
+            and(
+              eq(reservations.id, reservationId),
+              eq(reservations.shopperId, actor.userId),
+            ),
+          )
+          .limit(1)
+          .for("update", { of: reservations });
+        if (!original) throw new NotFoundError();
+
+        const scope = `reservation_backup:${reservationId}`;
+        const [prior] = await transaction
+          .select({ reservationId: idempotencyKeys.responseResourceId })
+          .from(idempotencyKeys)
+          .where(
+            and(
+              eq(idempotencyKeys.actorId, actor.userId),
+              eq(idempotencyKeys.scope, scope),
+              eq(idempotencyKeys.key, idempotencyKey),
+            ),
+          )
+          .limit(1);
+        if (prior?.reservationId) return prior.reservationId;
+
+        let originalStatus = original.status;
+        let originalOfferStatus = original.offerStatus;
+        if (
+          originalStatus === "requested" &&
+          original.responseDueAt.getTime() <= now.getTime()
+        ) {
+          transitionReservation(originalStatus, "cancelled");
+          transitionOffer(originalOfferStatus, "expired");
+          await transaction
+            .update(reservations)
+            .set({ status: "cancelled" })
+            .where(and(eq(reservations.id, original.id), eq(reservations.status, "requested")));
+          await transaction
+            .update(offers)
+            .set({ status: "expired" })
+            .where(
+              and(
+                eq(offers.id, original.offerId),
+                eq(offers.status, "reservation_requested"),
+              ),
+            );
+          originalStatus = "cancelled";
+          originalOfferStatus = "expired";
+        }
+
+        if (
+          originalStatus !== "cancelled" ||
+          (originalOfferStatus !== "declined" && originalOfferStatus !== "expired")
+        ) {
+          throw new ReservationConflictError("The primary request is still active");
+        }
+        if (!original.backupOfferId) {
+          throw new ReservationConflictError("No backup offer is available");
+        }
+
+        const [backup] = await transaction
+          .select({
+            id: offers.id,
+            status: offers.status,
+            assuranceRole: offers.assuranceRole,
+            briefId: matches.briefId,
+            providerId: listings.providerId,
+            rentalPriceCents: listings.rentalPriceCents,
+            depositDisplayCents: listings.depositDisplayCents,
+          })
+          .from(offers)
+          .innerJoin(matches, eq(matches.id, offers.matchId))
+          .innerJoin(listings, eq(listings.id, matches.listingId))
+          .where(eq(offers.id, original.backupOfferId))
+          .limit(1)
+          .for("update", { of: offers });
+        if (
+          !backup ||
+          backup.status !== "ready" ||
+          backup.assuranceRole !== "backup" ||
+          backup.briefId !== original.briefId
+        ) {
+          throw new ReservationConflictError("The designated backup is no longer eligible");
+        }
+
+        const [existingSuccessor] = await transaction
+          .select({ id: reservations.id })
+          .from(reservations)
+          .where(eq(reservations.supersedesReservationId, original.id))
+          .limit(1);
+        if (existingSuccessor) {
+          throw new ReservationConflictError("A backup has already been activated");
+        }
+
+        transitionOffer(backup.status, "reservation_requested");
+        const urgency = classifyEventUrgency(original.eventStartsAt, now);
+        const [created] = await transaction
+          .insert(reservations)
+          .values({
+            offerId: backup.id,
+            briefId: original.briefId,
+            shopperId: actor.userId,
+            providerId: backup.providerId,
+            eventDate: original.eventDate,
+            pickupDate: original.pickupDate,
+            returnDate: original.returnDate,
+            rentalPriceCents: backup.rentalPriceCents,
+            depositDisplayCents: backup.depositDisplayCents,
+            status: "requested",
+            responseDueAt: new Date(now.getTime() + responseWindowMs(urgency)),
+            backupOfferId: null,
+            supersedesReservationId: original.id,
+            createdAt: now,
+          })
+          .returning({ id: reservations.id });
+        await transaction
+          .update(offers)
+          .set({ status: "reservation_requested" })
+          .where(and(eq(offers.id, backup.id), eq(offers.status, "ready")));
+        await transaction.insert(idempotencyKeys).values({
+          actorId: actor.userId,
+          scope,
+          key: idempotencyKey,
+          responseResourceId: created!.id,
+          createdAt: now,
+        });
+        return created!.id;
+      }, { isolationLevel: "serializable" }),
+    );
+
+    return this.getDetail(actor, activatedReservationId, now);
+  }
+
+  async listProviderRequests(
+    actor: Actor,
+    now = new Date(),
+  ): Promise<ProviderReservationRequest[]> {
     if (actor.role !== "provider") throw new NotFoundError();
+    await this.db.transaction(async (transaction) => {
+      const overdue = await transaction
+        .select({
+          reservationId: reservations.id,
+          reservationStatus: reservations.status,
+          offerId: offers.id,
+          offerStatus: offers.status,
+        })
+        .from(reservations)
+        .innerJoin(offers, eq(offers.id, reservations.offerId))
+        .innerJoin(matches, eq(matches.id, offers.matchId))
+        .innerJoin(listings, eq(listings.id, matches.listingId))
+        .where(
+          and(
+            eq(listings.providerId, actor.userId),
+            eq(reservations.status, "requested"),
+            lte(reservations.responseDueAt, now),
+          ),
+        )
+        .for("update", { of: reservations });
+      if (overdue.length === 0) return;
+      for (const request of overdue) {
+        transitionReservation(request.reservationStatus, "cancelled");
+        transitionOffer(request.offerStatus, "expired");
+      }
+      await transaction
+        .update(reservations)
+        .set({ status: "cancelled" })
+        .where(inArray(reservations.id, overdue.map((request) => request.reservationId)));
+      await transaction
+        .update(offers)
+        .set({ status: "expired" })
+        .where(inArray(offers.id, overdue.map((request) => request.offerId)));
+    }, { isolationLevel: "serializable" });
     const rows = await this.db
       .select({
         id: offers.id,

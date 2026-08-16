@@ -17,6 +17,9 @@ function reservation(status: ReservationDetail["status"]): ReservationDetail {
     returnDate: "2026-09-21T17:00:00.000Z",
     rentalPriceCents: 7_800,
     depositDisplayCents: 4_000,
+    responseDueAt: "2026-08-15T16:00:00.000Z",
+    backupOfferId: "53000000-0000-4000-8000-000000000003",
+    supersedesReservationId: null,
     simulation: true,
   };
 }
