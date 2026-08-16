@@ -45,6 +45,16 @@ const reservationStatusSchema = z.enum([
   "returned",
   "cancelled",
 ]);
+const assuranceRoleSchema = z.enum(["primary", "backup", "alternative"]);
+const eventUrgencySchema = z.enum(["tonight", "tomorrow", "this_week", "planned"]);
+const readinessBreakdownSchema = z.strictObject({
+  availability: z.number().int().min(0).max(35),
+  measurements: z.number().int().min(0).max(25),
+  proximity: z.number().int().min(0).max(20),
+  style: z.number().int().min(0).max(10),
+  confirmation: z.number().int().min(0).max(10),
+  total: z.number().int().min(0).max(100),
+});
 
 const measurementProfileSchema = z.strictObject({
   bustTenthsCm: tenthsCmSchema,
@@ -166,6 +176,11 @@ export const offerCardSchema = z.strictObject({
   originalImageUrl: z.url(),
   resultImageUrl: z.url().nullable(),
   expiresAt: dateTimeSchema,
+  assuranceRole: assuranceRoleSchema,
+  eventStartsAt: dateTimeSchema,
+  urgency: eventUrgencySchema,
+  readiness: readinessBreakdownSchema,
+  responseDueAt: dateTimeSchema.nullable(),
 });
 
 export const providerRequestSchema = z.strictObject({
@@ -181,6 +196,11 @@ export const providerRequestSchema = z.strictObject({
   rentalPriceCents: centsSchema,
   pickupDate: dateTimeSchema,
   returnDate: dateTimeSchema,
+  assuranceRole: assuranceRoleSchema,
+  eventStartsAt: dateTimeSchema,
+  urgency: eventUrgencySchema,
+  readiness: readinessBreakdownSchema,
+  responseDueAt: dateTimeSchema.nullable(),
 });
 
 export const reservationDetailSchema = z.strictObject({
@@ -196,6 +216,11 @@ export const reservationDetailSchema = z.strictObject({
   rentalPriceCents: centsSchema,
   depositDisplayCents: centsSchema,
   simulation: z.literal(true),
+  assuranceRole: assuranceRoleSchema,
+  eventStartsAt: dateTimeSchema,
+  urgency: eventUrgencySchema,
+  readiness: readinessBreakdownSchema,
+  responseDueAt: dateTimeSchema.nullable(),
 });
 
 export type CreateBriefCommand = z.infer<typeof createBriefCommandSchema>;

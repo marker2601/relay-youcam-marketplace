@@ -60,6 +60,18 @@ const offer = {
   originalImageUrl: "https://media.relay.test/original?signature=signed",
   resultImageUrl: "https://media.relay.test/result?signature=signed",
   expiresAt: "2099-06-10T18:00:00.000Z",
+  assuranceRole: "primary",
+  eventStartsAt: "2099-06-12T00:00:00.000Z",
+  urgency: "planned",
+  readiness: {
+    availability: 35,
+    measurements: 25,
+    proximity: 20,
+    style: 10,
+    confirmation: 10,
+    total: 100,
+  },
+  responseDueAt: "2099-06-10T22:00:00.000Z",
 } satisfies OfferCard;
 
 describe("public API response contracts", () => {
@@ -91,6 +103,18 @@ describe("public API response contracts", () => {
       rentalPriceCents: 7_800,
       pickupDate: "2099-06-11T05:00:00.000Z",
       returnDate: "2099-06-14T05:00:00.000Z",
+      assuranceRole: "primary",
+      eventStartsAt: "2099-06-12T00:00:00.000Z",
+      urgency: "planned",
+      readiness: {
+        availability: 35,
+        measurements: 25,
+        proximity: 20,
+        style: 10,
+        confirmation: 10,
+        total: 100,
+      },
+      responseDueAt: "2099-06-10T22:00:00.000Z",
     } satisfies ProviderRequest;
 
     const parsed = providerRequestSchema.parse(request);
@@ -112,6 +136,18 @@ describe("public API response contracts", () => {
       rentalPriceCents: 7_800,
       depositDisplayCents: 4_000,
       simulation: true,
+      assuranceRole: "primary",
+      eventStartsAt: "2099-06-12T00:00:00.000Z",
+      urgency: "planned",
+      readiness: {
+        availability: 35,
+        measurements: 25,
+        proximity: 20,
+        style: 10,
+        confirmation: 10,
+        total: 100,
+      },
+      responseDueAt: "2099-06-10T22:00:00.000Z",
     } satisfies ReservationDetail;
 
     expect(reservationDetailSchema.parse(reservation).simulation).toBe(true);

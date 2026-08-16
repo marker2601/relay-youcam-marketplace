@@ -1,4 +1,18 @@
 /** Measurements cross domain boundaries as integer tenths of one centimeter. */
+import type {
+  AssuranceCoverage,
+  AssuranceRole,
+  EventUrgency,
+  ReadinessBreakdown,
+} from "./assurance";
+
+export type {
+  AssuranceCoverage,
+  AssuranceRole,
+  EventUrgency,
+  ReadinessBreakdown,
+} from "./assurance";
+
 export type TenthsCm = number & { readonly __unit: "tenths_cm" };
 export type MoneyCents = number;
 
@@ -68,6 +82,11 @@ export interface OfferCard {
   originalImageUrl: string;
   resultImageUrl: string | null;
   expiresAt: string;
+  assuranceRole: AssuranceRole;
+  eventStartsAt: string;
+  urgency: EventUrgency;
+  readiness: ReadinessBreakdown;
+  responseDueAt: string | null;
 }
 
 export interface ProviderRequest {
@@ -83,6 +102,11 @@ export interface ProviderRequest {
   rentalPriceCents: MoneyCents;
   pickupDate: string;
   returnDate: string;
+  assuranceRole: AssuranceRole;
+  eventStartsAt: string;
+  urgency: EventUrgency;
+  readiness: ReadinessBreakdown;
+  responseDueAt: string | null;
 }
 
 export interface ReservationDetail {
@@ -98,6 +122,11 @@ export interface ReservationDetail {
   rentalPriceCents: MoneyCents;
   depositDisplayCents: MoneyCents;
   simulation: true;
+  assuranceRole: AssuranceRole;
+  eventStartsAt: string;
+  urgency: EventUrgency;
+  readiness: ReadinessBreakdown;
+  responseDueAt: string | null;
 }
 
 export interface BriefDetail {
