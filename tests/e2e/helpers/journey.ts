@@ -6,6 +6,21 @@ import { seedIds } from "../../../scripts/seed";
 
 export const validPhotoPath = path.resolve("public/demo/garments/emerald-midi.png");
 
+export function futureChicagoEventDate(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((candidate) => candidate.type === type)?.value);
+  const result = new Date(Date.UTC(part("year"), part("month") - 1, part("day") + 30));
+  return result.toISOString().slice(0, 10);
+}
+
+export const validEventDate = futureChicagoEventDate();
+
 const seedUserIds = [
   seedIds.shopper,
   seedIds.peerJordan,
@@ -46,7 +61,7 @@ export async function fillBrief(
   page: Page,
   options: { budgetMin?: string; budgetMax?: string } = {},
 ): Promise<void> {
-  await page.getByLabel("Event date").fill("2026-09-20");
+  await page.getByLabel("Event date").fill(validEventDate);
   await page.getByLabel("Event time (Chicago)").fill("19:00");
   await page.getByLabel("Minimum budget (USD)").fill(options.budgetMin ?? "50");
   await page.getByLabel("Maximum budget (USD)").fill(options.budgetMax ?? "120");

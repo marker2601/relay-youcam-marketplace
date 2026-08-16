@@ -7,6 +7,8 @@ import {
   enterAsProvider,
   enterAsShopper,
   fillBrief,
+  futureChicagoEventDate,
+  validEventDate,
   waitForReadyOffers,
 } from "./helpers/journey";
 
@@ -109,6 +111,8 @@ test("shopper request and provider acceptance converge on one confirmed reservat
 test("invalid photo preserves fields, and a no-match brief widens without another upload", async ({
   page,
 }) => {
+  expect(futureChicagoEventDate(new Date("2026-12-31T05:59:59.000Z"))).toBe("2027-01-29");
+  expect(futureChicagoEventDate(new Date("2026-12-31T06:00:00.000Z"))).toBe("2027-01-30");
   await enterAsShopper(page);
   await fillBrief(page, { budgetMin: "1", budgetMax: "2" });
   const tinyPng = await sharp({
@@ -123,7 +127,7 @@ test("invalid photo preserves fields, and a no-match brief widens without anothe
   });
   await page.getByRole("button", { name: "Find my matches" }).click();
   await expect(page.locator(".form-error")).toContainText(/512 pixels/i);
-  await expect(page.getByLabel("Event date")).toHaveValue("2026-09-20");
+  await expect(page.getByLabel("Event date")).toHaveValue(validEventDate);
   await expect(page.getByLabel("Maximum budget (USD)")).toHaveValue("2");
 
   await page.getByLabel("Full-body photo").setInputFiles(
