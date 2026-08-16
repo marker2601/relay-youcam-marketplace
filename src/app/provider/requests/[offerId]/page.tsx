@@ -2,10 +2,24 @@ import { notFound, redirect } from "next/navigation";
 
 import { ProviderDecisionPanel } from "@/components/provider/provider-decision-panel";
 import { ReservationTimeline } from "@/components/reservation/reservation-timeline";
+import { NotFoundError } from "@/lib/repositories/briefs";
 import { ReservationRepository } from "@/lib/repositories/reservations";
 import { currentPageActor, marketplaceRuntime } from "@/lib/server/marketplace-runtime";
 
 export const dynamic = "force-dynamic";
+
+async function loadProviderRequest(
+  repository: ReservationRepository,
+  actor: { userId: string; role: "provider" },
+  offerId: string,
+) {
+  try {
+    return await repository.getProviderRequestByOfferId(actor, offerId);
+  } catch (error) {
+    if (error instanceof NotFoundError) notFound();
+    throw error;
+  }
+}
 
 export default async function ProviderRequestPage({ params }: { params: Promise<{ offerId: string }> }) {
   const actor = await currentPageActor();
@@ -13,8 +27,11 @@ export default async function ProviderRequestPage({ params }: { params: Promise<
   if (actor.role !== "provider") notFound();
   const { offerId } = await params;
   const repository = new ReservationRepository(marketplaceRuntime().db);
-  const request = (await repository.listProviderRequests(actor)).find((item) => item.id === offerId);
-  if (!request) notFound();
+  const request = await loadProviderRequest(
+    repository,
+    { userId: actor.userId, role: "provider" },
+    offerId,
+  );
   const detail = await repository.getDetail(actor, request.reservationId);
 
   return (

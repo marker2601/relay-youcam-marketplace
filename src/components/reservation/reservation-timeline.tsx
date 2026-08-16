@@ -34,6 +34,8 @@ const baseStatusLabels: Record<ReservationDetail["status"], string> = {
 
 type ActivateBackup = (reservationId: string) => Promise<{ id: string }>;
 
+class ReservationChangedError extends Error {}
+
 interface ReservationTimelineProps {
   reservation: ReservationDetail;
   activateBackup?: ActivateBackup;
@@ -44,8 +46,23 @@ async function postBackup(reservationId: string): Promise<{ id: string }> {
     method: "POST",
     headers: { "Idempotency-Key": crypto.randomUUID() },
   });
-  const body = await response.json() as { id?: string };
-  if (!response.ok || !body.id) throw new Error("The backup look could not be activated.");
+  if (response.status === 409) throw new ReservationChangedError();
+  if (!response.ok) throw new Error("The backup look could not be activated.");
+  let body: unknown;
+  try {
+    body = await response.json() as unknown;
+  } catch {
+    throw new Error("The backup look could not be activated.");
+  }
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("id" in body) ||
+    typeof body.id !== "string" ||
+    body.id.length === 0
+  ) {
+    throw new Error("The backup look could not be activated.");
+  }
   return { id: body.id };
 }
 
@@ -84,6 +101,11 @@ export function ReservationTimeline({
       const activated = await activateBackup(reservation.id);
       router.push(`/reservations/${activated.id}`);
     } catch (caught) {
+      if (caught instanceof ReservationChangedError) {
+        setError("This reservation changed. Refreshing the latest status.");
+        router.refresh();
+        return;
+      }
       setError(caught instanceof Error ? caught.message : "The backup look could not be activated.");
       setPending(false);
       pendingRef.current = false;

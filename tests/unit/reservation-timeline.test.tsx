@@ -6,8 +6,9 @@ import { ReservationTimeline } from "@/components/reservation/reservation-timeli
 import type { ReservationDetail } from "@/lib/repositories/reservations";
 
 const push = vi.fn();
+const refresh = vi.fn();
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => {
@@ -113,6 +114,61 @@ describe("ReservationTimeline", () => {
       },
     );
     expect(push).toHaveBeenCalledWith("/reservations/default-backup-reservation");
+  });
+
+  it("refreshes and keeps backup activation disabled after a stale conflict", async () => {
+    const json = vi.fn();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 409, json }));
+    const user = userEvent.setup();
+
+    render(<ReservationTimeline reservation={reservation("cancelled")} />);
+    await user.click(screen.getByRole("button", { name: "Activate backup look" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This reservation changed. Refreshing the latest status.",
+    );
+    expect(screen.getByRole("button", { name: "Activate backup look" })).toBeDisabled();
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(json).not.toHaveBeenCalled();
+  });
+
+  it("keeps a non-conflict backup failure retryable without parsing its body", async () => {
+    const json = vi.fn();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, json }));
+    const user = userEvent.setup();
+
+    render(<ReservationTimeline reservation={reservation("cancelled")} />);
+    await user.click(screen.getByRole("button", { name: "Activate backup look" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("The backup look could not be activated.");
+    expect(screen.getByRole("button", { name: "Activate backup look" })).toBeEnabled();
+    expect(refresh).not.toHaveBeenCalled();
+    expect(json).not.toHaveBeenCalled();
+  });
+
+  it("uses stable generic copy for a successful response with a non-JSON body", async () => {
+    const json = vi.fn().mockRejectedValue(new SyntaxError("Unexpected end of JSON input"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json }));
+    const user = userEvent.setup();
+
+    render(<ReservationTimeline reservation={reservation("cancelled")} />);
+    await user.click(screen.getByRole("button", { name: "Activate backup look" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("The backup look could not be activated.");
+    expect(screen.getByRole("button", { name: "Activate backup look" })).toBeEnabled();
+    expect(json).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses stable generic copy for an empty successful JSON body", async () => {
+    const json = vi.fn().mockResolvedValue(null);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json }));
+    const user = userEvent.setup();
+
+    render(<ReservationTimeline reservation={reservation("cancelled")} />);
+    await user.click(screen.getByRole("button", { name: "Activate backup look" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("The backup look could not be activated.");
+    expect(screen.getByRole("button", { name: "Activate backup look" })).toBeEnabled();
   });
 
   it("guides a cancelled request without an eligible backup toward a wider plan", () => {

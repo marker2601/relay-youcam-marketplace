@@ -398,6 +398,20 @@ describe("reservation selection and provider decision", () => {
     );
 
     expect(requests).toEqual([]);
+    await expect(repository.getProviderRequestByOfferId(boutique, primary.offerId, new Date(primary.responseDueAt)))
+      .resolves.toMatchObject({
+        id: primary.offerId,
+        reservationId: primary.id,
+        status: "expired",
+        offerStatus: "expired",
+      });
+    await expect(
+      repository.getProviderRequestByOfferId(
+        { userId: seedIds.peerJordan, role: "provider" },
+        primary.offerId,
+        new Date(primary.responseDueAt),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundError);
     expect(
       (await testDb.select().from(reservations).where(eq(reservations.id, primary.id)))[0]!.status,
     ).toBe("cancelled");

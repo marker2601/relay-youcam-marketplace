@@ -1,11 +1,19 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProviderDecisionPanel } from "@/components/provider/provider-decision-panel";
 import { RequestCard } from "@/components/provider/request-card";
 import type { ProviderReservationRequest } from "@/lib/repositories/reservations";
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+const refresh = vi.fn();
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.unstubAllGlobals();
+});
 
 const request: ProviderReservationRequest = {
   id: "54000000-0000-4000-8000-000000000001",
@@ -59,6 +67,49 @@ describe("ProviderDecisionPanel", () => {
 
     expect(screen.getByText("This request has a final decision.")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Accept request" })).not.toBeInTheDocument();
+  });
+
+  it("refreshes and keeps decisions disabled when the server reports a stale conflict", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 409 })));
+    const user = userEvent.setup();
+    render(
+      <ProviderDecisionPanel
+        reservationId="reservation"
+        terminal={false}
+        responseDueAt="2099-06-12T20:00:00.000Z"
+        urgency="tomorrow"
+      />,
+    );
+
+    await user.type(screen.getByLabelText(/Type ACCEPT/), "ACCEPT");
+    await user.click(screen.getByRole("button", { name: "Accept request" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This request changed. Refreshing the latest status.",
+    );
+    expect(screen.getByRole("button", { name: "Accept request" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Decline request" })).toBeDisabled();
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps non-conflict failures retryable", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
+    const user = userEvent.setup();
+    render(
+      <ProviderDecisionPanel
+        reservationId="reservation"
+        terminal={false}
+        responseDueAt="2099-06-12T20:00:00.000Z"
+        urgency="tomorrow"
+      />,
+    );
+
+    await user.type(screen.getByLabelText(/Type ACCEPT/), "ACCEPT");
+    await user.click(screen.getByRole("button", { name: "Accept request" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Relay could not accept this request.");
+    expect(screen.getByRole("button", { name: "Accept request" })).toBeEnabled();
+    expect(refresh).not.toHaveBeenCalled();
   });
 });
 

@@ -56,7 +56,7 @@ export interface ReservationDetail {
 export interface ProviderReservationRequest {
   id: string;
   reservationId: string;
-  status: "reservation_requested" | "accepted" | "declined";
+  status: "reservation_requested" | "accepted" | "declined" | "expired";
   offerStatus: OfferStatus;
   assuranceRole: AssuranceRole;
   eventType: "wedding_guest" | "cocktail_party" | "gala" | "holiday_party";
@@ -787,5 +787,89 @@ export class ReservationRepository {
         hasBackup: backupOfferId !== null,
       };
     });
+  }
+
+  async getProviderRequestByOfferId(
+    actor: Actor,
+    offerId: string,
+    now = new Date(),
+  ): Promise<ProviderReservationRequest> {
+    if (actor.role !== "provider") throw new NotFoundError();
+    const row = await retrySerializable(() =>
+      this.db.transaction(async (transaction) => {
+        const [selected] = await transaction
+          .select({
+            id: offers.id,
+            reservationId: reservations.id,
+            reservationStatus: reservations.status,
+            offerStatus: offers.status,
+            assuranceRole: offers.assuranceRole,
+            eventType: eventBriefs.eventType,
+            eventDate: eventBriefs.eventDate,
+            eventStartsAt: eventBriefs.eventStartsAt,
+            dressCode: eventBriefs.dressCode,
+            sizeLabel: eventBriefs.sizeLabel,
+            listingId: listings.id,
+            listingTitle: listings.title,
+            rentalPriceCents: reservations.rentalPriceCents,
+            pickupDate: reservations.pickupDate,
+            returnDate: reservations.returnDate,
+            responseDueAt: reservations.responseDueAt,
+            backupOfferId: reservations.backupOfferId,
+          })
+          .from(reservations)
+          .innerJoin(offers, eq(offers.id, reservations.offerId))
+          .innerJoin(matches, eq(matches.id, offers.matchId))
+          .innerJoin(listings, eq(listings.id, matches.listingId))
+          .innerJoin(eventBriefs, eq(eventBriefs.id, reservations.briefId))
+          .where(
+            and(
+              eq(offers.id, offerId),
+              eq(listings.providerId, actor.userId),
+              inArray(offers.status, [
+                "reservation_requested",
+                "accepted",
+                "declined",
+                "expired",
+              ]),
+            ),
+          )
+          .limit(1)
+          .for("update", { of: reservations });
+        if (!selected) throw new NotFoundError();
+        const reconciled = await reconcileTimedOutRequest(
+          transaction,
+          {
+            reservationId: selected.reservationId,
+            reservationStatus: selected.reservationStatus,
+            responseDueAt: selected.responseDueAt,
+            offerId: selected.id,
+            offerStatus: selected.offerStatus,
+          },
+          now,
+        );
+        return { ...selected, offerStatus: reconciled.offerStatus };
+      }, { isolationLevel: "serializable" }),
+    );
+    return {
+      id: row.id,
+      reservationId: row.reservationId,
+      status: row.offerStatus as ProviderReservationRequest["status"],
+      offerStatus: row.offerStatus,
+      assuranceRole: row.assuranceRole,
+      eventType: row.eventType,
+      eventDate: row.eventDate,
+      eventStartsAt: row.eventStartsAt.toISOString(),
+      urgency: classifyEventUrgency(row.eventStartsAt, now),
+      dressCode: row.dressCode,
+      sizeLabel: row.sizeLabel,
+      listingId: row.listingId,
+      listingTitle: row.listingTitle,
+      rentalPriceCents: row.rentalPriceCents,
+      pickupDate: row.pickupDate.toISOString(),
+      returnDate: row.returnDate.toISOString(),
+      responseDueAt: row.responseDueAt.toISOString(),
+      hasBackup: row.backupOfferId !== null,
+    };
   }
 }

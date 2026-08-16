@@ -65,6 +65,11 @@ export function ProviderDecisionPanel({
         method: "POST",
         headers: { "Idempotency-Key": crypto.randomUUID() },
       });
+      if (response.status === 409) {
+        setError("This request changed. Refreshing the latest status.");
+        router.refresh();
+        return;
+      }
       if (!response.ok) throw new Error(`Relay could not ${decision} this request.`);
       router.refresh();
     } catch (caught) {
