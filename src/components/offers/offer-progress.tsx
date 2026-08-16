@@ -141,11 +141,12 @@ export function OfferProgress({
     <section className="offer-progress" data-offer-progress>
       <div className="offer-progress__intro">
         <div>
-          <p className="eyebrow">Ranked for your event</p>
-          <h1>Your Relay shortlist</h1>
+          <p className="eyebrow">Event assurance</p>
+          <h1>Your Relay rescue plan</h1>
         </div>
         <p>
-          Compare the garment facts with the generated styling preview. Ready offers remain usable even if another preview cannot be made.
+          Compare each garment&apos;s facts with its YouCam styling preview. Relay keeps ready
+          looks usable when another preview fails.
         </p>
       </div>
       {(generationError || deadlineReached) && (

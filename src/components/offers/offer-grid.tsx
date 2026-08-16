@@ -14,6 +14,12 @@ export interface BriefRefinement {
 
 export type RefineBriefCommand = BriefRefinement;
 
+const assuranceRoleOrder = {
+  primary: 0,
+  backup: 1,
+  alternative: 2,
+} as const;
+
 function announcement(snapshot: OfferSnapshot): string {
   if (snapshot.briefStatus === "no_matches" || snapshot.offers.length === 0) {
     return "No strong matches yet. Adjust your search to try again.";
@@ -47,6 +53,14 @@ export function OfferGrid({ snapshot, refinement, onRefine, onImageExpired }: Of
   const [refining, setRefining] = useState(false);
   const [refineError, setRefineError] = useState<string | null>(null);
   const noMatches = snapshot.briefStatus === "no_matches" || snapshot.offers.length === 0;
+  const orderedOffers = [...snapshot.offers].sort(
+    (left, right) =>
+      assuranceRoleOrder[left.assuranceRole] - assuranceRoleOrder[right.assuranceRole],
+  );
+  const primary = orderedOffers.find((offer) => offer.assuranceRole === "primary");
+  const backup = orderedOffers.find((offer) => offer.assuranceRole === "backup");
+  const usesIndependentProviders =
+    primary !== undefined && backup !== undefined && primary.provider.id !== backup.provider.id;
 
   async function submitRefinement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -115,11 +129,35 @@ export function OfferGrid({ snapshot, refinement, onRefine, onImageExpired }: Of
           )}
         </section>
       ) : (
-        <div className="offer-grid">
-          {snapshot.offers.map((offer) => (
-            <OfferCard key={offer.id} offer={offer} onImageExpired={onImageExpired} />
-          ))}
-        </div>
+        <section className="assurance-plan" aria-labelledby="assurance-plan-title">
+          <div className="assurance-plan__summary">
+            <div>
+              <p className="eyebrow">Primary and backup plan</p>
+              <h2 id="assurance-plan-title">Your event assurance plan</h2>
+            </div>
+            <p className="assurance-plan__resilience">
+              <strong>Plan coverage</strong>
+              <span>
+                {snapshot.assuranceCoverage === "primary_only"
+                  ? "Primary only—widen budget, radius, or category to add protection"
+                  : usesIndependentProviders
+                    ? "Independent providers reduce the chance that one cancellation leaves you without a plan"
+                    : "Primary and backup currently come from the same provider"}
+              </span>
+            </p>
+          </div>
+          <div className="offer-grid">
+            {orderedOffers.map((offer) => (
+              <OfferCard
+                key={offer.id}
+                offer={offer}
+                eventStartsAt={snapshot.eventStartsAt}
+                urgency={snapshot.urgency}
+                onImageExpired={onImageExpired}
+              />
+            ))}
+          </div>
+        </section>
       )}
     </>
   );

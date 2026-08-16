@@ -3,11 +3,11 @@ import { DemoEntryLink } from "@/components/demo-entry-link";
 export default function HomePage() {
   return (
     <main className="home-shell">
-      <p className="eyebrow">Circular occasionwear, on demand</p>
-      <h1>Post the event. See yourself in the options. Rent the winner.</h1>
+      <p className="eyebrow">Event assurance, powered by local closets</p>
+      <h1>Relay is the reliability layer for time-sensitive fashion.</h1>
       <p className="lede">
-        Relay matches one event brief with available pieces from local closets and rental
-        boutiques, then uses virtual try-on to make the shortlist tangible.
+        Discovery apps show possibilities. Relay builds a primary look, a backup look, and an
+        owner-confirmed path to your event.
       </p>
       <nav aria-label="Get started" className="home-actions">
         <DemoEntryLink

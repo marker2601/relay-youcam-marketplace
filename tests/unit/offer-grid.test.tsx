@@ -13,15 +13,26 @@ const statuses = ["matched", "generating", "ready"] as const;
 function snapshot(
   offerStatuses: Array<OfferSnapshot["offers"][number]["status"]> = [...statuses],
   briefStatus: OfferSnapshot["briefStatus"] = "active",
+  assuranceRoles: Array<OfferSnapshot["offers"][number]["assuranceRole"]> = [
+    "primary",
+    "backup",
+    "alternative",
+  ],
 ): OfferSnapshot {
   return {
     briefId: "51000000-0000-4000-8000-000000000001",
     matchingRevision: 1,
     briefStatus,
+    eventStartsAt: "2026-08-17T01:00:00.000Z",
+    urgency: "tonight",
+    assuranceCoverage: assuranceRoles.includes("backup")
+      ? "primary_and_backup"
+      : "primary_only",
     offers: offerStatuses.map((status, index) => ({
       id: `offer-${index}`,
       listingId: `listing-${index}`,
       status,
+      assuranceRole: assuranceRoles[index] ?? "alternative",
       title: ["Emerald Satin Midi", "Midnight Tailored Jumpsuit", "Burgundy Maxi"][index]!,
       garmentCategory: "full_body",
       sizeLabel: "M",
@@ -43,6 +54,14 @@ function snapshot(
       pickupMethod: "Local pickup",
       scoreBasisPoints: 9_500 - index * 500,
       explanations: ["Measurements align", "Within budget", "Preferred color"],
+      readiness: {
+        availability: 35,
+        measurements: 23 - index,
+        proximity: 18 - index,
+        style: 9 - index,
+        confirmation: 0,
+        total: 85 - index * 3,
+      },
       originalImageUrl: `https://relay.test/original-${index}`,
       resultImageUrl: status === "ready" ? `https://relay.test/result-${index}` : null,
       failureGuidance: status === "failed" ? "listing_image" : null,
@@ -62,6 +81,74 @@ const brief = {
 afterEach(() => vi.useRealTimers());
 
 describe("OfferGrid", () => {
+  it("orders and explains the primary and backup assurance plan", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-16T12:00:00.000Z"));
+    const plan = snapshot(
+      ["ready", "ready", "ready"],
+      "active",
+      ["alternative", "backup", "primary"],
+    );
+    plan.offers[0]!.provider.id = "provider-alternative";
+    plan.offers[1]!.provider.id = "provider-backup";
+    plan.offers[2]!.provider.id = "provider-primary";
+
+    render(<OfferGrid snapshot={plan} onImageExpired={vi.fn()} />);
+
+    const cards = screen.getAllByRole("article");
+    expect(within(cards[0]!).getByText("Primary look")).toBeVisible();
+    expect(cards[0]).toHaveAttribute("data-assurance-role", "primary");
+    expect(cards[0]).toHaveAttribute("data-provider-id", "provider-primary");
+    expect(within(cards[1]!).getByText("Backup look")).toBeVisible();
+    expect(cards[1]).toHaveAttribute("data-assurance-role", "backup");
+    expect(within(cards[2]!).getByText("Another option")).toBeVisible();
+    expect(screen.getAllByText(/Event readiness/)).toHaveLength(2);
+    expect(screen.getAllByRole("meter", { name: /Event readiness score/ })).toHaveLength(2);
+    for (const component of [
+      "Availability",
+      "Measurements",
+      "Proximity",
+      "Style",
+      "Confirmation",
+    ]) {
+      expect(screen.getAllByText(component)).toHaveLength(2);
+    }
+    expect(screen.getAllByText("Tonight")).toHaveLength(2);
+    expect(screen.getAllByText(/Event starts in/)).toHaveLength(2);
+    expect(
+      screen.getByText(
+        "Independent providers reduce the chance that one cancellation leaves you without a plan",
+      ),
+    ).toBeVisible();
+  });
+
+  it("truthfully identifies a plan without backup protection", () => {
+    const primaryOnly = snapshot(["ready"], "active", ["primary"]);
+
+    render(<OfferGrid snapshot={primaryOnly} onImageExpired={vi.fn()} />);
+
+    expect(
+      screen.getByText("Primary only—widen budget, radius, or category to add protection"),
+    ).toBeVisible();
+    expect(screen.queryByText("Backup look")).not.toBeInTheDocument();
+  });
+
+  it("does not claim provider independence when both looks share an owner", () => {
+    const sharedProvider = snapshot(["ready", "ready"], "active", ["primary", "backup"]);
+    sharedProvider.offers[1]!.provider.id = sharedProvider.offers[0]!.provider.id;
+
+    render(<OfferGrid snapshot={sharedProvider} onImageExpired={vi.fn()} />);
+
+    expect(
+      screen.queryByText(
+        "Independent providers reduce the chance that one cancellation leaves you without a plan",
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Primary and backup currently come from the same provider"),
+    ).toBeVisible();
+  });
+
   it.each([
     [["matched", "matched", "matched"], "3 matches found. Preview generation starts now."],
     [["generating", "generating", "generating"], "Preparing 3 previews."],
