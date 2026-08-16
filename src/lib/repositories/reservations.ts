@@ -199,6 +199,9 @@ export class ReservationRepository {
           rentalPriceCents: candidate.rentalPriceCents,
           depositDisplayCents: candidate.depositDisplayCents,
           status: "requested",
+          responseDueAt: new Date(now.getTime() + 4 * 60 * 60_000),
+          backupOfferId: null,
+          supersedesReservationId: null,
           createdAt: now,
         })
         .returning({ id: reservations.id });

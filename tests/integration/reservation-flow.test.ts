@@ -50,6 +50,7 @@ beforeEach(async () => {
     shopperId: seedIds.shopper,
     eventType: "wedding_guest",
     eventDate: "2026-09-20",
+    eventStartsAt: new Date("2026-09-21T00:00:00.000Z"),
     dressCode: "formal",
     budgetMinCents: 5_000,
     budgetMaxCents: 12_000,
@@ -159,7 +160,13 @@ describe("reservation selection and provider decision", () => {
       returnDate: "2026-09-21T17:00:00.000Z",
       simulation: true,
     });
-    expect(await testDb.select().from(reservations)).toHaveLength(1);
+    const persistedReservations = await testDb.select().from(reservations);
+    expect(persistedReservations).toHaveLength(1);
+    expect(persistedReservations[0]).toMatchObject({
+      responseDueAt: new Date("2026-08-15T16:00:00.000Z"),
+      backupOfferId: null,
+      supersedesReservationId: null,
+    });
 
     const chosen = await testDb.select().from(offers).where(eq(offers.id, graph.offerIds[0]!));
     const competing = await testDb

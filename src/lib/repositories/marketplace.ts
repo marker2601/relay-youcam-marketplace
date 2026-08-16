@@ -1,4 +1,16 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  notInArray,
+  or,
+} from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import type { Database } from "@/lib/db/client";
@@ -12,6 +24,7 @@ import {
   tryOnJobs,
 } from "@/lib/db/schema";
 import type { GarmentCategory, TryOnJobStatus } from "@/lib/domain/contracts";
+import { assignAssuranceRoles } from "@/lib/domain/assurance";
 import { rankMatches, type MatchBrief, type MatchListing } from "@/lib/domain/matching";
 import type { NormalizedYouCamError } from "@/lib/youcam/errors";
 
@@ -118,6 +131,48 @@ function toMatchListing(
 export class MarketplaceRepository {
   constructor(private readonly db: Database) {}
 
+  private async rebalanceAssuranceRoles(
+    transaction: Parameters<Parameters<Database["transaction"]>[0]>[0],
+    failedMatchId: string,
+  ): Promise<void> {
+    const [failedMatch] = await transaction
+      .select({ briefId: matches.briefId })
+      .from(matches)
+      .where(eq(matches.id, failedMatchId))
+      .limit(1);
+    if (!failedMatch) {
+      throw new Error("Failed match was not found");
+    }
+
+    const survivors = await transaction
+      .select({ id: offers.id, providerId: listings.providerId })
+      .from(offers)
+      .innerJoin(matches, eq(matches.id, offers.matchId))
+      .innerJoin(eventBriefs, eq(eventBriefs.id, matches.briefId))
+      .innerJoin(listings, eq(listings.id, matches.listingId))
+      .where(
+        and(
+          eq(matches.briefId, failedMatch.briefId),
+          eq(matches.briefRevision, eventBriefs.matchingRevision),
+          notInArray(offers.status, ["failed", "expired"]),
+        ),
+      )
+      .orderBy(desc(matches.scoreBasisPoints), asc(matches.listingId));
+    const roles = assignAssuranceRoles(survivors);
+
+    for (const survivor of survivors) {
+      await transaction
+        .update(offers)
+        .set({ assuranceRole: roles.get(survivor.id) ?? "alternative" })
+        .where(
+          and(
+            eq(offers.id, survivor.id),
+            notInArray(offers.status, ["failed", "expired"]),
+          ),
+        );
+    }
+  }
+
   private async loadGraph(briefId: string): Promise<CreatedJobGraph> {
     const rows = await this.db
       .select({
@@ -210,6 +265,10 @@ export class MarketplaceRepository {
         brief: toMatchBrief(brief),
         listings: candidates.map((candidate) => toMatchListing(brief, candidate)),
       });
+      const roles = assignAssuranceRoles(ranked.map((item) => ({
+        id: item.listingId,
+        providerId: candidates.find((candidate) => candidate.id === item.listingId)!.providerId,
+      })));
 
       const graph: CreatedJobGraph = {
         briefId: brief.id,
@@ -236,7 +295,13 @@ export class MarketplaceRepository {
           .returning({ id: matches.id });
         const [createdOffer] = await transaction
           .insert(offers)
-          .values({ matchId: createdMatch!.id, status: "matched", expiresAt, createdAt: input.now })
+          .values({
+            matchId: createdMatch!.id,
+            status: "matched",
+            assuranceRole: roles.get(rankedMatch.listingId) ?? "alternative",
+            expiresAt,
+            createdAt: input.now,
+          })
           .returning({ id: offers.id });
         const [createdJob] = await transaction
           .insert(tryOnJobs)
@@ -487,6 +552,7 @@ export class MarketplaceRepository {
         )
         .returning({ id: offers.id });
       requireUpdated(offerUpdated);
+      await this.rebalanceAssuranceRoles(transaction, updated[0]!.matchId);
     });
   }
 }

@@ -170,6 +170,7 @@ async function seedDeletableBrief(store: DeletionStore) {
     shopperId: seedIds.shopper,
     eventType: "wedding_guest",
     eventDate: "2026-09-20",
+    eventStartsAt: new Date("2026-09-21T00:00:00.000Z"),
     dressCode: "formal",
     budgetMinCents: 5_000,
     budgetMaxCents: 12_000,

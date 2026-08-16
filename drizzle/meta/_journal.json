@@ -15,6 +15,13 @@
       "when": 1786817544627,
       "tag": "0001_happy_captain_flint",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786894585090,
+      "tag": "0002_curvy_cable",
+      "breakpoints": true
     }
   ]
 }

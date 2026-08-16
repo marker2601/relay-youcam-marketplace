@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 import {
   eventBriefs,
   idempotencyKeys,
+  listings,
   matches,
   mediaObjects,
   offers,
@@ -182,6 +183,7 @@ beforeEach(async () => {
     shopperId: seedIds.shopper,
     eventType: "wedding_guest",
     eventDate: "2026-09-20",
+    eventStartsAt: new Date("2026-09-21T00:00:00.000Z"),
     dressCode: "formal",
     budgetMinCents: 5_000,
     budgetMaxCents: 12_000,
@@ -236,6 +238,19 @@ describe("createMatchesAndJobs", () => {
     expect(persistedJobs.every((job) => job.status === "queued")).toBe(true);
     expect(new Set(persistedJobs.map((job) => job.id))).toHaveLength(3);
     expect(persistedKeys).toHaveLength(1);
+
+    const persisted = await testDb
+      .select({ role: offers.assuranceRole, providerId: listings.providerId })
+      .from(offers)
+      .innerJoin(matches, eq(matches.id, offers.matchId))
+      .innerJoin(listings, eq(listings.id, matches.listingId))
+      .where(eq(matches.briefId, canonicalBriefId))
+      .orderBy(desc(matches.scoreBasisPoints));
+
+    expect(persisted[0]!.role).toBe("primary");
+    expect(persisted.filter((row) => row.role === "backup")).toHaveLength(1);
+    expect(persisted.find((row) => row.role === "backup")!.providerId)
+      .not.toBe(persisted[0]!.providerId);
   });
 
   it("serializes concurrent submissions of the same idempotency key", async () => {
@@ -349,6 +364,100 @@ describe("TryOnOrchestrator", () => {
       jobStatus: "failed",
       offerStatus: "failed",
     });
+  });
+
+  it("rebalances assurance roles after a terminal preview failure", async () => {
+    const { client, orchestrator } = await createOrchestrationHarness("success");
+    await orchestrator.advanceBrief(canonicalBriefId, minutesAfterBase(0));
+    await orchestrator.advanceBrief(canonicalBriefId, minutesAfterBase(1));
+    await orchestrator.advanceBrief(canonicalBriefId, minutesAfterBase(2));
+
+    const beforePoll = await testDb
+      .select({
+        jobId: tryOnJobs.id,
+        role: offers.assuranceRole,
+      })
+      .from(tryOnJobs)
+      .innerJoin(matches, eq(matches.id, tryOnJobs.matchId))
+      .innerJoin(offers, eq(offers.matchId, matches.id));
+    const failedPrimary = beforePoll.find((row) => row.role === "primary")!;
+    const [failedTask] = await testDb
+      .select({ externalTaskId: tryOnJobs.externalTaskId })
+      .from(tryOnJobs)
+      .where(eq(tryOnJobs.id, failedPrimary.jobId));
+    client.failedTaskIds.add(failedTask!.externalTaskId!);
+
+    await orchestrator.advanceBrief(canonicalBriefId, minutesAfterBase(3));
+
+    const outcomes = await testDb
+      .select({
+        jobId: tryOnJobs.id,
+        offerStatus: offers.status,
+        role: offers.assuranceRole,
+        providerId: listings.providerId,
+      })
+      .from(tryOnJobs)
+      .innerJoin(matches, eq(matches.id, tryOnJobs.matchId))
+      .innerJoin(offers, eq(offers.matchId, matches.id))
+      .innerJoin(listings, eq(listings.id, matches.listingId))
+      .orderBy(desc(matches.scoreBasisPoints));
+    const survivors = outcomes.filter((row) => !["failed", "expired"].includes(row.offerStatus));
+
+    expect(outcomes.find((row) => row.jobId === failedPrimary.jobId)!.offerStatus).toBe("failed");
+    expect(survivors[0]!.role).toBe("primary");
+    expect(survivors.filter((row) => row.role === "backup")).toHaveLength(1);
+    expect(survivors.find((row) => row.role === "backup")!.providerId)
+      .not.toBe(survivors[0]!.providerId);
+  });
+
+  it("does not rebalance obsolete-revision offers after a terminal preview failure", async () => {
+    const repository = new MarketplaceRepository(testDb);
+    await repository.createMatchesAndJobs({
+      briefId: canonicalBriefId,
+      actorId: seedIds.shopper,
+      idempotencyKey: "obsolete-revision-failure",
+      now: baseNow,
+    });
+    const before = await testDb
+      .select({ jobId: tryOnJobs.id, offerId: offers.id, role: offers.assuranceRole })
+      .from(tryOnJobs)
+      .innerJoin(matches, eq(matches.id, tryOnJobs.matchId))
+      .innerJoin(offers, eq(offers.matchId, matches.id))
+      .orderBy(desc(matches.scoreBasisPoints));
+    const failedPrimary = before.find((row) => row.role === "primary")!;
+    const survivingRoles = before
+      .filter((row) => row.offerId !== failedPrimary.offerId)
+      .map((row) => row.role);
+
+    await testDb
+      .update(eventBriefs)
+      .set({ matchingRevision: 2 })
+      .where(eq(eventBriefs.id, canonicalBriefId));
+    await testDb
+      .update(tryOnJobs)
+      .set({ status: "processing" })
+      .where(eq(tryOnJobs.id, failedPrimary.jobId));
+    await testDb
+      .update(offers)
+      .set({ status: "generating" })
+      .where(eq(offers.id, failedPrimary.offerId));
+
+    await repository.failJob({
+      jobId: failedPrimary.jobId,
+      expectedStatus: "processing",
+      expectedAttemptCount: 0,
+      code: "invalid_reference",
+      now: minutesAfterBase(1),
+    });
+
+    const after = await testDb
+      .select({ offerId: offers.id, role: offers.assuranceRole })
+      .from(offers)
+      .innerJoin(matches, eq(matches.id, offers.matchId))
+      .where(eq(matches.briefId, canonicalBriefId))
+      .orderBy(desc(matches.scoreBasisPoints));
+    expect(after.filter((row) => row.offerId !== failedPrimary.offerId).map((row) => row.role))
+      .toEqual(survivingRoles);
   });
 
   it("keeps persisted task state intact when HTTP 429 schedules a retry", async () => {

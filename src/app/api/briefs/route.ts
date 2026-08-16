@@ -13,6 +13,7 @@ import {
   matches,
   mediaObjects,
 } from "@/lib/db/schema";
+import { chicagoLocalDateTimeToIso } from "@/lib/domain/assurance";
 import { createBriefCommandSchema, type CreateBriefCommand } from "@/lib/domain/schemas";
 import { ImageValidationError, validateImage } from "@/lib/images/validate-image";
 import { PayloadTooLargeHttpError, toHttpErrorResponse } from "@/lib/http/errors";
@@ -225,6 +226,7 @@ export function createBriefPostHandler(options: CreateBriefPostHandlerOptions) {
           shopperId: actor.userId,
           eventType: command.data.eventType,
           eventDate: command.data.eventDate,
+          eventStartsAt: new Date(chicagoLocalDateTimeToIso(command.data.eventDate, "19:00")),
           dressCode: command.data.dressCode,
           budgetMinCents: command.data.budgetMinCents,
           budgetMaxCents: command.data.budgetMaxCents,

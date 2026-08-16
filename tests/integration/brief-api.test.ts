@@ -183,7 +183,9 @@ describe("POST /api/briefs", () => {
     expect(response.status).toBe(201);
     const body = await response.json();
     expect(body).toMatchObject({ outcome: "matched", matchCount: 3 });
-    expect(await testDb.select().from(eventBriefs)).toHaveLength(1);
+    const persistedBriefs = await testDb.select().from(eventBriefs);
+    expect(persistedBriefs).toHaveLength(1);
+    expect(persistedBriefs[0]!.eventStartsAt.toISOString()).toBe("2026-09-21T00:00:00.000Z");
     expect(await testDb.select().from(matches)).toHaveLength(3);
     expect((await testDb.select().from(mediaObjects)).filter((media) => media.kind === "brief_source"))
       .toHaveLength(1);
