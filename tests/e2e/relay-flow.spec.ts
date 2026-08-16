@@ -4,12 +4,63 @@ import { expect, test } from "@playwright/test";
 import { failOnePreview, resetApplicationState } from "./helpers/app-state";
 import {
   createBrief,
+  enterAsProvider,
   enterAsShopper,
   fillBrief,
   waitForReadyOffers,
 } from "./helpers/journey";
 
 test.beforeEach(async () => resetApplicationState());
+
+test("a declined primary activates an independent backup and reaches Event ready", async ({
+  browser,
+}) => {
+  const shopperContext = await browser.newContext();
+  const shopper = await shopperContext.newPage();
+  await enterAsShopper(shopper);
+  await createBrief(shopper);
+  await waitForReadyOffers(shopper);
+
+  const primary = shopper.locator('article[data-assurance-role="primary"]');
+  const backup = shopper.locator('article[data-assurance-role="backup"]');
+  const primaryProviderId = await primary.getAttribute("data-provider-id");
+  const backupProviderId = await backup.getAttribute("data-provider-id");
+  expect(primaryProviderId).toBeTruthy();
+  expect(backupProviderId).toBeTruthy();
+  expect(primaryProviderId).not.toBe(backupProviderId);
+
+  await primary.getByRole("button", { name: /^Request / }).click();
+  await expect(shopper).toHaveURL(/\/reservations\/[0-9a-f-]+$/);
+  const primaryReservationUrl = shopper.url();
+
+  const primaryContext = await browser.newContext();
+  const primaryProvider = await primaryContext.newPage();
+  await enterAsProvider(primaryProvider, primaryProviderId!);
+  await primaryProvider.getByRole("link", { name: "Review request" }).click();
+  await primaryProvider.getByLabel(/Type DECLINE/).fill("DECLINE");
+  await primaryProvider.getByRole("button", { name: "Decline request" }).click();
+  await expect(primaryProvider.getByText("This request has a final decision.")).toBeVisible();
+
+  await shopper.reload();
+  await shopper.getByRole("button", { name: "Activate backup look" }).click();
+  await expect(shopper).not.toHaveURL(primaryReservationUrl);
+  await expect(shopper).toHaveURL(/\/reservations\/[0-9a-f-]+$/);
+
+  const backupContext = await browser.newContext();
+  const backupProvider = await backupContext.newPage();
+  await enterAsProvider(backupProvider, backupProviderId!);
+  await backupProvider.getByRole("link", { name: "Review request" }).click();
+  await backupProvider.getByLabel(/Type ACCEPT/).fill("ACCEPT");
+  await backupProvider.getByRole("button", { name: "Accept request" }).click();
+  await expect(backupProvider.getByText("This request has a final decision.")).toBeVisible();
+
+  await shopper.reload();
+  await expect(shopper.getByRole("heading", { name: "Event ready" })).toBeVisible();
+  await expect(shopper.getByText(/no payment has been collected/i)).toBeVisible();
+  await shopperContext.close();
+  await primaryContext.close();
+  await backupContext.close();
+});
 
 test("shopper request and provider acceptance converge on one confirmed reservation", async ({
   browser,
@@ -20,20 +71,20 @@ test("shopper request and provider acceptance converge on one confirmed reservat
   await createBrief(shopper);
   await waitForReadyOffers(shopper);
 
-  const selectedTitle = await shopper.getByRole("article").first().getByRole("heading").innerText();
-  const requestButton = shopper.getByRole("button", { name: `Request ${selectedTitle}` });
+  const primary = shopper.locator('article[data-assurance-role="primary"]');
+  const primaryProviderId = await primary.getAttribute("data-provider-id");
+  expect(primaryProviderId).toBeTruthy();
+  const requestButton = primary.getByRole("button", { name: /^Request / });
   await requestButton.evaluate((button: HTMLButtonElement) => {
     button.click();
     button.click();
   });
   await expect(shopper).toHaveURL(/\/reservations\/[0-9a-f-]+$/);
-  await expect(shopper.getByRole("status")).toContainText("Request sent");
+  await expect(shopper.getByRole("status")).toContainText("Awaiting owner confirmation");
 
   const providerContext = await browser.newContext();
   const provider = await providerContext.newPage();
-  await provider.goto("/");
-  await provider.getByRole("link", { name: "Supply your closet" }).click();
-  await expect(provider).toHaveURL(/\/provider$/);
+  await enterAsProvider(provider, primaryProviderId!);
   await provider.getByRole("link", { name: "Review request" }).click();
   await provider.getByLabel(/Type ACCEPT/).fill("ACCEPT");
   const accept = provider.getByRole("button", { name: "Accept request" });
@@ -46,10 +97,10 @@ test("shopper request and provider acceptance converge on one confirmed reservat
   });
   expect((await acceptResponse).status()).toBe(200);
   await provider.reload();
-  await expect(provider.getByText("Current reservation state: Confirmed")).toBeAttached();
+  await expect(provider.getByText("Current reservation state: Event ready")).toBeAttached();
 
   await shopper.reload();
-  await expect(shopper.getByText("Current reservation state: Confirmed")).toBeAttached();
+  await expect(shopper.getByText("Current reservation state: Event ready")).toBeAttached();
   await expect(shopper.getByText(/no payment has been collected/i)).toBeVisible();
   await shopperContext.close();
   await providerContext.close();
