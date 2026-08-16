@@ -13,7 +13,12 @@ import {
   users,
 } from "@/lib/db/schema";
 import { classifyEventUrgency, responseWindowMs } from "@/lib/domain/assurance";
-import type { OfferStatus, ReservationStatus } from "@/lib/domain/contracts";
+import type {
+  AssuranceRole,
+  EventUrgency,
+  OfferStatus,
+  ReservationStatus,
+} from "@/lib/domain/contracts";
 import { transitionOffer, transitionReservation } from "@/lib/domain/state-machines";
 import { NotFoundError } from "@/lib/repositories/briefs";
 
@@ -27,17 +32,23 @@ export class ReservationConflictError extends Error {
 export interface ReservationDetail {
   id: string;
   offerId: string;
+  offerStatus: OfferStatus;
+  assuranceRole: AssuranceRole;
   status: "requested" | "confirmed" | "ready_for_pickup" | "in_use" | "returned" | "cancelled";
   garmentTitle: string;
   providerDisplayName: string;
   providerType: "peer" | "boutique";
   eventDate: string;
+  eventStartsAt: string;
+  urgency: EventUrgency;
   pickupDate: string;
   returnDate: string;
   rentalPriceCents: number;
   depositDisplayCents: number;
   responseDueAt: string;
   backupOfferId: string | null;
+  backup: { offerId: string; title: string; providerDisplayName: string } | null;
+  canActivateBackup: boolean;
   supersedesReservationId: string | null;
   simulation: true;
 }
@@ -46,8 +57,12 @@ export interface ProviderReservationRequest {
   id: string;
   reservationId: string;
   status: "reservation_requested" | "accepted" | "declined";
+  offerStatus: OfferStatus;
+  assuranceRole: AssuranceRole;
   eventType: "wedding_guest" | "cocktail_party" | "gala" | "holiday_party";
   eventDate: string;
+  eventStartsAt: string;
+  urgency: EventUrgency;
   dressCode: "cocktail" | "formal" | "semi_formal" | "festive";
   sizeLabel: string;
   listingId: string;
@@ -55,6 +70,8 @@ export interface ProviderReservationRequest {
   rentalPriceCents: number;
   pickupDate: string;
   returnDate: string;
+  responseDueAt: string;
+  hasBackup: boolean;
 }
 
 function addCalendarDays(dateOnly: string, days: number): string {
@@ -185,10 +202,13 @@ export class ReservationRepository {
           offerId: reservations.offerId,
           status: reservations.status,
           offerStatus: offers.status,
+          assuranceRole: offers.assuranceRole,
+          briefId: reservations.briefId,
           garmentTitle: listings.title,
           providerDisplayName: users.displayName,
           providerType: users.providerType,
           eventDate: eventBriefs.eventDate,
+          eventStartsAt: eventBriefs.eventStartsAt,
           pickupDate: reservations.pickupDate,
           returnDate: reservations.returnDate,
           rentalPriceCents: reservations.rentalPriceCents,
@@ -218,27 +238,77 @@ export class ReservationRepository {
         },
         now,
       );
+      const [backupCandidate] = selected.backupOfferId
+        ? await transaction
+            .select({
+              offerId: offers.id,
+              offerStatus: offers.status,
+              assuranceRole: offers.assuranceRole,
+              briefId: matches.briefId,
+              title: listings.title,
+              providerDisplayName: users.displayName,
+            })
+            .from(offers)
+            .innerJoin(matches, eq(matches.id, offers.matchId))
+            .innerJoin(listings, eq(listings.id, matches.listingId))
+            .innerJoin(users, eq(users.id, listings.providerId))
+            .where(eq(offers.id, selected.backupOfferId))
+            .limit(1)
+        : [];
+      const eligibleBackup =
+        backupCandidate?.assuranceRole === "backup" &&
+        backupCandidate.briefId === selected.briefId
+          ? backupCandidate
+          : undefined;
+      const [successor] =
+        actor.role === "shopper" && eligibleBackup
+          ? await transaction
+              .select({ id: reservations.id })
+              .from(reservations)
+              .where(eq(reservations.supersedesReservationId, selected.id))
+              .limit(1)
+          : [];
       return {
         ...selected,
         status: reconciled.reservationStatus,
         offerStatus: reconciled.offerStatus,
+        backupCandidate: eligibleBackup,
+        hasSuccessor: Boolean(successor),
       };
     });
     if (!row || !row.providerType) throw new NotFoundError();
     return {
       id: row.id,
       offerId: row.offerId,
+      offerStatus: row.offerStatus,
+      assuranceRole: row.assuranceRole,
       status: row.status,
       garmentTitle: row.garmentTitle,
       providerDisplayName: row.providerDisplayName,
       providerType: row.providerType,
       eventDate: row.eventDate,
+      eventStartsAt: row.eventStartsAt.toISOString(),
+      urgency: classifyEventUrgency(row.eventStartsAt, now),
       pickupDate: row.pickupDate.toISOString(),
       returnDate: row.returnDate.toISOString(),
       rentalPriceCents: row.rentalPriceCents,
       depositDisplayCents: row.depositDisplayCents,
       responseDueAt: row.responseDueAt.toISOString(),
-      backupOfferId: row.backupOfferId,
+      backupOfferId: actor.role === "shopper" ? row.backupOfferId : null,
+      backup:
+        actor.role === "shopper" && row.backupCandidate
+          ? {
+              offerId: row.backupCandidate.offerId,
+              title: row.backupCandidate.title,
+              providerDisplayName: row.backupCandidate.providerDisplayName,
+            }
+          : null,
+      canActivateBackup:
+        actor.role === "shopper" &&
+        row.status === "cancelled" &&
+        (row.offerStatus === "declined" || row.offerStatus === "expired") &&
+        row.backupCandidate?.offerStatus === "ready" &&
+        !row.hasSuccessor,
       supersedesReservationId: row.supersedesReservationId,
       simulation: true,
     };
@@ -678,8 +748,10 @@ export class ReservationRepository {
         id: offers.id,
         reservationId: reservations.id,
         status: offers.status,
+        assuranceRole: offers.assuranceRole,
         eventType: eventBriefs.eventType,
         eventDate: eventBriefs.eventDate,
+        eventStartsAt: eventBriefs.eventStartsAt,
         dressCode: eventBriefs.dressCode,
         sizeLabel: eventBriefs.sizeLabel,
         listingId: listings.id,
@@ -687,6 +759,8 @@ export class ReservationRepository {
         rentalPriceCents: reservations.rentalPriceCents,
         pickupDate: reservations.pickupDate,
         returnDate: reservations.returnDate,
+        responseDueAt: reservations.responseDueAt,
+        backupOfferId: reservations.backupOfferId,
       })
       .from(reservations)
       .innerJoin(offers, eq(offers.id, reservations.offerId))
@@ -699,11 +773,19 @@ export class ReservationRepository {
           or(eq(offers.status, "reservation_requested"), eq(offers.status, "accepted"), eq(offers.status, "declined")),
         ),
       );
-    return rows.map((row) => ({
-      ...row,
-      status: row.status as ProviderReservationRequest["status"],
-      pickupDate: row.pickupDate.toISOString(),
-      returnDate: row.returnDate.toISOString(),
-    }));
+    return rows.map((row) => {
+      const { backupOfferId, ...publicRow } = row;
+      return {
+        ...publicRow,
+        status: row.status as ProviderReservationRequest["status"],
+        offerStatus: row.status,
+        eventStartsAt: row.eventStartsAt.toISOString(),
+        urgency: classifyEventUrgency(row.eventStartsAt, now),
+        pickupDate: row.pickupDate.toISOString(),
+        returnDate: row.returnDate.toISOString(),
+        responseDueAt: row.responseDueAt.toISOString(),
+        hasBackup: backupOfferId !== null,
+      };
+    });
   }
 }

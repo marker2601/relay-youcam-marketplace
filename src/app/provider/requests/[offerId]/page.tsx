@@ -25,7 +25,14 @@ export default async function ProviderRequestPage({ params }: { params: Promise<
         <p className="lede">{request.eventType.replaceAll("_", " ")} · {request.eventDate} · size {request.sizeLabel}</p>
       </header>
       <ReservationTimeline reservation={detail} />
-      <ProviderDecisionPanel reservationId={detail.id} terminal={detail.status !== "requested"} />
+      <ProviderDecisionPanel
+        reservationId={detail.id}
+        terminal={detail.status !== "requested" || detail.offerStatus !== "reservation_requested"}
+        responseDueAt={detail.responseDueAt}
+        urgency={detail.urgency}
+        eventStartsAt={detail.eventStartsAt}
+        hasBackup={request.hasBackup}
+      />
     </main>
   );
 }
