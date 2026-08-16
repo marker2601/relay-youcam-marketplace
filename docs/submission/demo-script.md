@@ -1,60 +1,55 @@
-# Relay demo script (2:40 target)
+# Relay Rescue demo script (2:40 target)
 
-Use a consented, non-sensitive test photo and a completed real YouCam result for the recorded path. Keep the video public, free of copyrighted music and third-party marks, and below three minutes.
+Record the verified production flow at 1080p using the existing synthetic, consent-safe shopper image and project-owned garment assets. Show at least one real YouCam Clothes v3 result. Keep credentials, task IDs, object keys, signed URLs, developer tools, copyrighted music, and unrelated third-party marks out of frame.
 
-## 0:00–0:15 — Problem and market
+## 0:00–0:15 — The problem and promise
 
-**Visual:** Relay home page; briefly show the two marketplace sides.
+**Visual:** Open the production home page and hold on the headline.
 
-**Voiceover:** “Special-event clothes often sit unused while another shopper buys a new outfit under deadline pressure. Relay reverses that search: the shopper posts the need, circular inventory competes to fulfill it, and YouCam becomes the confidence layer before a reservation.”
+**Voiceover:** “Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities; Relay makes sure you have something to wear. When one provider cannot fulfill the plan, Relay already has the next viable look ready.”
 
-## 0:15–0:40 — Shopper brief
+## 0:15–0:40 — Time-sensitive brief and consent
 
-**Visual:** Choose **Shop as a guest**. Fill the event date, dress code, budget, size and garment measurements, radius, colors, and styles. Upload the consented full-body photo and point to the consent copy.
+**Visual:** Enter as the shopper. Create a brief for tomorrow, including **Event time (Chicago)**, constraints, preferences, measurements, and explicit photo consent. Upload the synthetic shopper image.
 
-**Voiceover:** “One structured brief captures the occasion, constraints, and preferences. Relay validates the photo locally, stores it privately, and never shows the source image to providers.”
+**Voiceover:** “One brief captures the event deadline, budget, category, measurements, location, and style. Relay validates and stores the consented photo privately. Providers never receive that source image or the shopper's measurements.”
 
-## 0:40–1:15 — Explainable matches and real VTO
+## 0:40–1:10 — Primary and independent backup previews
 
-**Visual:** Submit. Show the three independent generation states resolving. Open the comparison on the top result and linger on price, measurements, provider type, score explanation, source garment, generated result, and fit disclaimer.
+**Visual:** Submit and let the three candidates resolve. Frame the primary and backup together. Point to their distinct provider names, YouCam results, readiness totals and components, event countdown, plan-resilience note, and fit disclaimer.
 
-**Voiceover:** “Hard filters remove incompatible or unavailable inventory. A deterministic weighted rank returns at most three explainable matches. For each candidate, Relay registers both files, uploads through YouCam's signed instructions, creates a Clothes v3 task, polls with bounded retries, and copies the time-limited result into Relay's private storage. Appearance is previewed; physical fit is never promised.”
+**Voiceover:** “Hard filters and explainable ranking produce at most three matches. Relay assigns the strongest as primary and prefers a different provider for the backup. YouCam Clothes v3 renders each candidate independently. The readiness score explains availability, measurements, proximity, style, and confirmation; it is not a fit or delivery guarantee.”
 
-## 1:15–1:35 — Reservation request
+## 1:10–1:35 — Primary provider declines
 
-**Visual:** Request the strongest offer. Show the `Request sent` timeline and the persistent **Reservation simulation** disclosure.
+**Visual:** Request the primary. Show **Awaiting owner confirmation** and its deadline. Switch to the exact provider shown on the primary card, open the request, point out the privacy boundary, type `DECLINE`, and decline.
 
-**Voiceover:** “The shopper requests one offer. The idempotent command creates a single reservation even if a button or network retries. No payment is collected.”
+**Voiceover:** “The primary request keeps the backup ready and gives the owner a response deadline based on urgency. This owner declines. No payment has been collected, and the shopper's private photo and measurements remain hidden.”
 
-## 1:35–1:55 — Provider acceptance
+## 1:35–2:00 — One-tap recovery
 
-**Visual:** Switch to **Supply your closet**, open the matching request, type `ACCEPT`, and accept it. Point out that the provider sees event/garment context but not the source photo.
+**Visual:** Return to the shopper timeline and refresh. Show **Backup available**, then choose **Activate backup look**. Point out that no new search, upload, or YouCam generation is required.
 
-**Voiceover:** “Only the listing owner can review and decide. The provider receives the qualified request without unnecessary shopper data and accepts it once.”
+**Voiceover:** “Instead of restarting, Relay exposes the already-rendered backup. One authorized, idempotent action creates the backup request from the original plan.”
 
-## 1:55–2:10 — Confirmed handoff
+## 2:00–2:20 — Backup accepted; Event ready
 
-**Visual:** Return to the shopper timeline and refresh to show **Confirmed**, pickup, event, and return dates.
+**Visual:** Switch to the independent backup provider shown earlier, review the new request, type `ACCEPT`, and accept. Return to the shopper and refresh until the heading reads **Event ready**. Hold on the no-payment disclosure.
 
-**Voiceover:** “Both sides converge on the same confirmed state and handoff window.”
+**Voiceover:** “The independent backup provider accepts. Both sides converge on Event ready. In this prototype that means provider-confirmed reservation intent, not guaranteed delivery or physical fit.”
 
-## 2:10–2:30 — Business model and impact hypothesis
+## 2:20–2:40 — Business, privacy, and expansion
 
-**Visual:** Return to a shortlist or closing slide with the two-sided loop.
+**Visual:** End on the hero or a clean closing slide; briefly show the privacy/deletion control.
 
-**Voiceover:** “Relay's launch hypothesis is an 18% commission on completed rentals. The initial wedge is one dense metro and occasionwear: urgent, high-intent demand matched against underused peer closets and local boutiques. The measurable opportunity is better inventory utilization and new provider income—not an unverified promise of lower returns or environmental impact.”
-
-## 2:30–2:40 — Trust, limits, close
-
-**Visual:** Open **Privacy and image deletion**, then end on the Relay mark.
-
-**Voiceover:** “Images stay private behind short-lived Relay URLs and can be deleted from Relay at any time. Payments, logistics, identity, and damage protection are intentionally deferred. Relay turns virtual try-on into marketplace infrastructure, not a one-call wrapper.”
+**Voiceover:** “Relay's current business-model hypothesis is an 18 percent commission on completed rentals. A future version could test an event-assurance fee and route boutique inventory, retailer returns, or local deadstock into urgent demand. Today, Relay proves the core: visual confidence plus a resilient two-provider plan.”
 
 ## Recording checklist
 
-- [ ] Use the production URL in an incognito browser.
-- [ ] Show one real Clothes v3 result, not the fake adapter.
-- [ ] Keep the YouCam key, task ID, object key, signed URLs, and developer tools out of frame.
-- [ ] Show shopper, provider, confirmed timeline, privacy control, and visible disclaimer.
-- [ ] Export at 1080p with readable text and no copyrighted audio.
-- [ ] Upload publicly to YouTube (preferred), Vimeo, or Youku and add the URL to the release checklist.
+- [ ] Use https://relay-youcam-marketplace.vercel.app in a signed-out browser.
+- [ ] Use the existing synthetic, consent-safe shopper image and project-owned garments.
+- [ ] Show one real YouCam Clothes v3 result and explain the integration.
+- [ ] Show distinct primary and backup providers, the response deadline, decline, backup activation, acceptance, and **Event ready**.
+- [ ] Keep the source photo out of the provider view and show the no-payment/non-fit boundaries.
+- [ ] Export 1080p, 1–3 minutes, with readable text and no copyrighted audio.
+- [ ] Upload publicly to YouTube, Vimeo, or Youku and verify the URL signed out.
