@@ -8,6 +8,7 @@ import type {
 } from "@/lib/domain/contracts";
 import {
   offerCardSchema,
+  offerSnapshotSchema,
   providerRequestSchema,
   reservationDetailSchema,
 } from "@/lib/domain/schemas";
@@ -74,7 +75,91 @@ const offer = {
   responseDueAt: "2099-06-10T22:00:00.000Z",
 } satisfies OfferCard;
 
+const offerSnapshot = {
+  briefId: ids.brief,
+  matchingRevision: 1,
+  briefStatus: "active",
+  eventStartsAt: "2099-06-12T00:00:00.000Z",
+  urgency: "planned",
+  assuranceCoverage: "primary_and_backup",
+  sourcePhotoNeedsReplacement: false,
+  offers: [
+    {
+      id: ids.offer,
+      listingId: ids.listing,
+      status: "ready",
+      assuranceRole: "primary",
+      title: "Emerald satin midi",
+      garmentCategory: "full_body",
+      sizeLabel: "M",
+      measurements: {
+        bustTenthsCm: cm(960),
+        waistTenthsCm: cm(780),
+        hipsTenthsCm: cm(1_040),
+        lengthTenthsCm: cm(1_180),
+      },
+      condition: "excellent",
+      rentalPriceCents: 7_800,
+      depositDisplayCents: 4_000,
+      provider: {
+        id: ids.provider,
+        displayName: "West Loop Wardrobe",
+        providerType: "boutique",
+      },
+      distanceBand: "west Chicago",
+      pickupMethod: "Local pickup",
+      scoreBasisPoints: 8_725,
+      explanations: ["Measurements allow 4â€“8 cm ease", "Matches formal dress code"],
+      readiness: {
+        availability: 35,
+        measurements: 25,
+        proximity: 20,
+        style: 10,
+        confirmation: 10,
+        total: 100,
+      },
+      originalImageUrl: "https://media.relay.test/original?signature=signed",
+      resultImageUrl: "https://media.relay.test/result?signature=signed",
+      failureGuidance: null,
+      expiresAt: "2099-06-10T18:00:00.000Z",
+    },
+  ],
+};
+
 describe("public API response contracts", () => {
+  it("parses the complete authorized offer snapshot projection", () => {
+    expect(offerSnapshotSchema.parse(offerSnapshot)).toEqual(offerSnapshot);
+  });
+
+  it("rejects missing and extra assurance-readiness snapshot fields", () => {
+    const { assuranceCoverage: _assuranceCoverage, ...withoutCoverage } = offerSnapshot;
+    const { assuranceRole: _assuranceRole, ...withoutRole } = offerSnapshot.offers[0]!;
+    const { readiness: _readiness, ...withoutReadiness } = offerSnapshot.offers[0]!;
+
+    expect(offerSnapshotSchema.safeParse(withoutCoverage).success).toBe(false);
+    expect(
+      offerSnapshotSchema.safeParse({ ...offerSnapshot, hiddenAssuranceState: "unreviewed" })
+        .success,
+    ).toBe(false);
+    expect(
+      offerSnapshotSchema.safeParse({ ...offerSnapshot, offers: [withoutRole] }).success,
+    ).toBe(false);
+    expect(
+      offerSnapshotSchema.safeParse({ ...offerSnapshot, offers: [withoutReadiness] }).success,
+    ).toBe(false);
+    expect(
+      offerSnapshotSchema.safeParse({
+        ...offerSnapshot,
+        offers: [
+          {
+            ...offerSnapshot.offers[0]!,
+            readiness: { ...offerSnapshot.offers[0]!.readiness, internalScore: 100 },
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
   it("serializes signed offer image URLs without private object keys", () => {
     const parsed = offerCardSchema.parse(offer);
 

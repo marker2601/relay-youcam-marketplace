@@ -28,6 +28,13 @@ const dressCodeSchema = z.enum(["cocktail", "formal", "semi_formal", "festive"])
 const garmentCategorySchema = z.enum(["upper_body", "lower_body", "full_body"]);
 const conditionSchema = z.enum(["excellent", "good", "fair"]);
 const providerTypeSchema = z.enum(["peer", "boutique"]);
+const briefStatusSchema = z.enum([
+  "matching",
+  "active",
+  "no_matches",
+  "deleting",
+  "deleted",
+]);
 const offerStatusSchema = z.enum([
   "matched",
   "generating",
@@ -165,6 +172,45 @@ export const acceptReservationCommandSchema = z.strictObject({
   idempotencyKey: z.string().trim().min(8).max(128),
 });
 
+export const offerSnapshotItemSchema = z.strictObject({
+  id: z.uuid(),
+  listingId: z.uuid(),
+  status: offerStatusSchema,
+  assuranceRole: assuranceRoleSchema,
+  title: z.string().min(1),
+  garmentCategory: garmentCategorySchema,
+  sizeLabel: z.string().min(1),
+  measurements: garmentMeasurementsSchema,
+  condition: conditionSchema,
+  rentalPriceCents: centsSchema,
+  depositDisplayCents: centsSchema,
+  provider: z.strictObject({
+    id: z.uuid(),
+    displayName: z.string().min(1),
+    providerType: providerTypeSchema,
+  }),
+  distanceBand: z.string().min(1),
+  pickupMethod: z.string().min(1),
+  scoreBasisPoints: z.number().int().min(0).max(10_000),
+  explanations: z.array(z.string().min(1)).min(1),
+  readiness: readinessBreakdownSchema,
+  originalImageUrl: z.url(),
+  resultImageUrl: z.url().nullable(),
+  failureGuidance: z.enum(["listing_image", "preview"]).nullable(),
+  expiresAt: dateTimeSchema,
+});
+
+export const offerSnapshotSchema = z.strictObject({
+  briefId: z.uuid(),
+  matchingRevision: z.number().int().positive(),
+  briefStatus: briefStatusSchema,
+  eventStartsAt: dateTimeSchema,
+  urgency: eventUrgencySchema,
+  assuranceCoverage: z.enum(["primary_and_backup", "primary_only"]),
+  sourcePhotoNeedsReplacement: z.boolean(),
+  offers: z.array(offerSnapshotItemSchema).max(3),
+});
+
 export const offerCardSchema = z.strictObject({
   id: z.uuid(),
   briefId: z.uuid(),
@@ -240,6 +286,7 @@ export type CreateBriefCommand = z.infer<typeof createBriefCommandSchema>;
 export type CreateListingCommand = z.infer<typeof createListingCommandSchema>;
 export type RequestReservationCommand = z.infer<typeof requestReservationCommandSchema>;
 export type AcceptReservationCommand = z.infer<typeof acceptReservationCommandSchema>;
+export type OfferSnapshotResponse = z.infer<typeof offerSnapshotSchema>;
 export type OfferCardResponse = z.infer<typeof offerCardSchema>;
 export type ProviderRequestResponse = z.infer<typeof providerRequestSchema>;
 export type ReservationDetailResponse = z.infer<typeof reservationDetailSchema>;
