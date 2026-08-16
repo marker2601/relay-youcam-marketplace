@@ -13,6 +13,7 @@ import {
   users,
 } from "@/lib/db/schema";
 import { classifyEventUrgency, responseWindowMs } from "@/lib/domain/assurance";
+import type { OfferStatus, ReservationStatus } from "@/lib/domain/contracts";
 import { transitionOffer, transitionReservation } from "@/lib/domain/state-machines";
 import { NotFoundError } from "@/lib/repositories/briefs";
 
@@ -88,7 +89,12 @@ function chicagoNoon(dateOnly: string): Date {
 }
 
 function isSerializationFailure(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "40001";
+  let current = error;
+  for (let depth = 0; depth < 4 && typeof current === "object" && current !== null; depth += 1) {
+    if ("code" in current && current.code === "40001") return true;
+    current = "cause" in current ? current.cause : undefined;
+  }
+  return false;
 }
 
 async function retrySerializable<T>(operation: () => Promise<T>): Promise<T> {
@@ -99,6 +105,65 @@ async function retrySerializable<T>(operation: () => Promise<T>): Promise<T> {
       if (attempt >= 2 || !isSerializationFailure(error)) throw error;
     }
   }
+}
+
+type DatabaseTransaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+interface LockedReservationOffer {
+  reservationId: string;
+  reservationStatus: ReservationStatus;
+  responseDueAt: Date;
+  offerId: string;
+  offerStatus: OfferStatus;
+}
+
+interface ReconciledReservationOffer {
+  reservationStatus: ReservationStatus;
+  offerStatus: OfferStatus;
+  timedOut: boolean;
+}
+
+async function reconcileTimedOutRequest(
+  transaction: DatabaseTransaction,
+  request: LockedReservationOffer,
+  now: Date,
+): Promise<ReconciledReservationOffer> {
+  if (
+    request.reservationStatus !== "requested" ||
+    request.responseDueAt.getTime() > now.getTime()
+  ) {
+    return {
+      reservationStatus: request.reservationStatus,
+      offerStatus: request.offerStatus,
+      timedOut: false,
+    };
+  }
+
+  transitionReservation(request.reservationStatus, "cancelled");
+  transitionOffer(request.offerStatus, "expired");
+  await transaction
+    .update(reservations)
+    .set({ status: "cancelled" })
+    .where(
+      and(
+        eq(reservations.id, request.reservationId),
+        eq(reservations.status, "requested"),
+      ),
+    );
+  await transaction
+    .update(offers)
+    .set({ status: "expired" })
+    .where(
+      and(
+        eq(offers.id, request.offerId),
+        eq(offers.status, "reservation_requested"),
+      ),
+    );
+  return {
+    reservationStatus: "cancelled",
+    offerStatus: "expired",
+    timedOut: true,
+  };
 }
 
 export class ReservationRepository {
@@ -141,28 +206,23 @@ export class ReservationRepository {
         .where(and(eq(reservations.id, reservationId), ownership))
         .limit(1)
         .for("update", { of: reservations });
-      if (
-        selected?.status === "requested" &&
-        selected.responseDueAt.getTime() <= now.getTime()
-      ) {
-        transitionReservation(selected.status, "cancelled");
-        transitionOffer(selected.offerStatus, "expired");
-        await transaction
-          .update(reservations)
-          .set({ status: "cancelled" })
-          .where(and(eq(reservations.id, selected.id), eq(reservations.status, "requested")));
-        await transaction
-          .update(offers)
-          .set({ status: "expired" })
-          .where(
-            and(
-              eq(offers.id, selected.offerId),
-              eq(offers.status, "reservation_requested"),
-            ),
-          );
-        return { ...selected, status: "cancelled" as const, offerStatus: "expired" as const };
-      }
-      return selected;
+      if (!selected) return selected;
+      const reconciled = await reconcileTimedOutRequest(
+        transaction,
+        {
+          reservationId: selected.id,
+          reservationStatus: selected.status,
+          responseDueAt: selected.responseDueAt,
+          offerId: selected.offerId,
+          offerStatus: selected.offerStatus,
+        },
+        now,
+      );
+      return {
+        ...selected,
+        status: reconciled.reservationStatus,
+        offerStatus: reconciled.offerStatus,
+      };
     });
     if (!row || !row.providerType) throw new NotFoundError();
     return {
@@ -355,7 +415,7 @@ export class ReservationRepository {
     now: Date,
   ): Promise<ReservationDetail> {
     if (actor.role !== "provider") throw new NotFoundError();
-    const outcome = await this.db.transaction(async (transaction) => {
+    const outcome = await retrySerializable(() => this.db.transaction(async (transaction) => {
       const [request] = await transaction
         .select({
           reservationStatus: reservations.status,
@@ -371,42 +431,35 @@ export class ReservationRepository {
         .limit(1)
         .for("update", { of: reservations });
       if (!request) throw new NotFoundError();
-
-      if (
-        request.reservationStatus === "requested" &&
-        request.responseDueAt.getTime() <= now.getTime()
-      ) {
-        transitionReservation(request.reservationStatus, "cancelled");
-        transitionOffer(request.offerStatus, "expired");
-        await transaction
-          .update(reservations)
-          .set({ status: "cancelled" })
-          .where(and(eq(reservations.id, reservationId), eq(reservations.status, "requested")));
-        await transaction
-          .update(offers)
-          .set({ status: "expired" })
-          .where(
-            and(eq(offers.id, request.offerId), eq(offers.status, "reservation_requested")),
-          );
-        return "timed_out" as const;
-      }
+      const reconciled = await reconcileTimedOutRequest(
+        transaction,
+        {
+          reservationId,
+          reservationStatus: request.reservationStatus,
+          responseDueAt: request.responseDueAt,
+          offerId: request.offerId,
+          offerStatus: request.offerStatus,
+        },
+        now,
+      );
+      if (reconciled.timedOut) return "timed_out" as const;
 
       const targetReservation = decision === "accept" ? "confirmed" : "cancelled";
       const targetOffer = decision === "accept" ? "accepted" : "declined";
       if (
-        request.reservationStatus === targetReservation &&
-        request.offerStatus === targetOffer
+        reconciled.reservationStatus === targetReservation &&
+        reconciled.offerStatus === targetOffer
       ) {
         return "decided" as const;
       }
       if (
-        request.reservationStatus !== "requested" ||
-        request.offerStatus !== "reservation_requested"
+        reconciled.reservationStatus !== "requested" ||
+        reconciled.offerStatus !== "reservation_requested"
       ) {
         throw new ReservationConflictError("This request has already been decided");
       }
-      transitionReservation(request.reservationStatus, targetReservation);
-      transitionOffer(request.offerStatus, targetOffer);
+      transitionReservation(reconciled.reservationStatus, targetReservation);
+      transitionOffer(reconciled.offerStatus, targetOffer);
       await transaction
         .update(reservations)
         .set({ status: targetReservation })
@@ -426,7 +479,7 @@ export class ReservationRepository {
         })
         .onConflictDoNothing();
       return "decided" as const;
-    }, { isolationLevel: "serializable" });
+    }, { isolationLevel: "serializable" }));
     if (outcome === "timed_out") {
       throw new ReservationConflictError("The provider response window has expired");
     }
@@ -484,34 +537,21 @@ export class ReservationRepository {
           .limit(1);
         if (prior?.reservationId) return prior.reservationId;
 
-        let originalStatus = original.status;
-        let originalOfferStatus = original.offerStatus;
-        if (
-          originalStatus === "requested" &&
-          original.responseDueAt.getTime() <= now.getTime()
-        ) {
-          transitionReservation(originalStatus, "cancelled");
-          transitionOffer(originalOfferStatus, "expired");
-          await transaction
-            .update(reservations)
-            .set({ status: "cancelled" })
-            .where(and(eq(reservations.id, original.id), eq(reservations.status, "requested")));
-          await transaction
-            .update(offers)
-            .set({ status: "expired" })
-            .where(
-              and(
-                eq(offers.id, original.offerId),
-                eq(offers.status, "reservation_requested"),
-              ),
-            );
-          originalStatus = "cancelled";
-          originalOfferStatus = "expired";
-        }
+        const reconciled = await reconcileTimedOutRequest(
+          transaction,
+          {
+            reservationId: original.id,
+            reservationStatus: original.status,
+            responseDueAt: original.responseDueAt,
+            offerId: original.offerId,
+            offerStatus: original.offerStatus,
+          },
+          now,
+        );
 
         if (
-          originalStatus !== "cancelled" ||
-          (originalOfferStatus !== "declined" && originalOfferStatus !== "expired")
+          reconciled.reservationStatus !== "cancelled" ||
+          (reconciled.offerStatus !== "declined" && reconciled.offerStatus !== "expired")
         ) {
           throw new ReservationConflictError("The primary request is still active");
         }
@@ -597,11 +637,12 @@ export class ReservationRepository {
     now = new Date(),
   ): Promise<ProviderReservationRequest[]> {
     if (actor.role !== "provider") throw new NotFoundError();
-    await this.db.transaction(async (transaction) => {
+    await retrySerializable(() => this.db.transaction(async (transaction) => {
       const overdue = await transaction
         .select({
           reservationId: reservations.id,
           reservationStatus: reservations.status,
+          responseDueAt: reservations.responseDueAt,
           offerId: offers.id,
           offerStatus: offers.status,
         })
@@ -619,18 +660,19 @@ export class ReservationRepository {
         .for("update", { of: reservations });
       if (overdue.length === 0) return;
       for (const request of overdue) {
-        transitionReservation(request.reservationStatus, "cancelled");
-        transitionOffer(request.offerStatus, "expired");
+        await reconcileTimedOutRequest(
+          transaction,
+          {
+            reservationId: request.reservationId,
+            reservationStatus: request.reservationStatus,
+            responseDueAt: request.responseDueAt,
+            offerId: request.offerId,
+            offerStatus: request.offerStatus,
+          },
+          now,
+        );
       }
-      await transaction
-        .update(reservations)
-        .set({ status: "cancelled" })
-        .where(inArray(reservations.id, overdue.map((request) => request.reservationId)));
-      await transaction
-        .update(offers)
-        .set({ status: "expired" })
-        .where(inArray(offers.id, overdue.map((request) => request.offerId)));
-    }, { isolationLevel: "serializable" });
+    }, { isolationLevel: "serializable" }));
     const rows = await this.db
       .select({
         id: offers.id,

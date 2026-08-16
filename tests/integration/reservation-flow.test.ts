@@ -17,6 +17,7 @@ import { NotFoundError } from "@/lib/repositories/briefs";
 import { seedIds, seedRelay } from "../../scripts/seed";
 import {
   closeTestDatabase,
+  createTestDatabaseConnection,
   migrateTestDatabase,
   resetTestDatabase,
   testDb,
@@ -400,6 +401,95 @@ describe("reservation selection and provider decision", () => {
     expect(
       (await testDb.select().from(reservations).where(eq(reservations.id, primary.id)))[0]!.status,
     ).toBe("cancelled");
+  });
+
+  it("retries a serialization race between a deadline decision and provider-list reconciliation", async () => {
+    await testDb
+      .update(eventBriefs)
+      .set({ eventStartsAt: new Date("2026-08-16T12:00:00.000Z") })
+      .where(eq(eventBriefs.id, briefId));
+    const repository = new ReservationRepository(testDb);
+    const primary = await repository.request(
+      shopper,
+      graph.offerIds[0]!,
+      "primary-race-006",
+      now,
+    );
+    const deadline = new Date(primary.responseDueAt);
+
+    const blockerConnection = createTestDatabaseConnection({ max: 1 });
+    const concurrentConnection = createTestDatabaseConnection({ max: 1 });
+    const observerConnection = createTestDatabaseConnection({ max: 1 });
+    const concurrentRepository = new ReservationRepository(concurrentConnection.db);
+    let releaseBlocker: () => void = () => undefined;
+    let announceBlocker: () => void = () => undefined;
+    const blockerReleased = new Promise<void>((resolve) => {
+      releaseBlocker = resolve;
+    });
+    const blockerLocked = new Promise<void>((resolve) => {
+      announceBlocker = resolve;
+    });
+    const blocker = blockerConnection.db.transaction(async (transaction) => {
+      await transaction
+        .select({ id: reservations.id })
+        .from(reservations)
+        .where(eq(reservations.id, primary.id))
+        .for("update", { of: reservations });
+      announceBlocker();
+      await blockerReleased;
+    });
+    await blockerLocked;
+
+    const decisionPromise = repository.decide(
+      boutique,
+      primary.id,
+      "accept",
+      "deadline-race-006",
+      deadline,
+    );
+    const providerListPromise = concurrentRepository.listProviderRequests(boutique, deadline);
+    let waitingTransactions = 0;
+    try {
+      for (let attempt = 0; attempt < 100 && waitingTransactions < 2; attempt += 1) {
+        const [activity] = await observerConnection.sql<{ waiting_transactions: number }[]>`
+          select count(*)::int as waiting_transactions
+          from pg_stat_activity
+          where datname = current_database()
+            and wait_event_type = 'Lock'
+            and query ilike '%reservations%'
+        `;
+        waitingTransactions = activity!.waiting_transactions;
+        if (waitingTransactions < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+    } finally {
+      releaseBlocker();
+      await blocker;
+    }
+    const [decision, providerList] = await Promise.allSettled([
+      decisionPromise,
+      providerListPromise,
+    ]).finally(async () => {
+      await Promise.all([
+        blockerConnection.sql.end(),
+        concurrentConnection.sql.end(),
+        observerConnection.sql.end(),
+      ]);
+    });
+
+    expect(waitingTransactions).toBeGreaterThanOrEqual(2);
+    expect(decision.status).toBe("rejected");
+    if (decision.status === "rejected") {
+      expect(decision.reason).toBeInstanceOf(ReservationConflictError);
+    }
+    expect(providerList).toEqual({ status: "fulfilled", value: [] });
+    expect(
+      (await testDb.select().from(reservations).where(eq(reservations.id, primary.id)))[0]!.status,
+    ).toBe("cancelled");
+    expect(
+      (await testDb.select().from(offers).where(eq(offers.id, primary.offerId)))[0]!.status,
+    ).toBe("expired");
   });
 
   it("allows only the selected listing provider to accept exactly once", async () => {
