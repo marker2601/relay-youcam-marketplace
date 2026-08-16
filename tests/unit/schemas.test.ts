@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   createBriefCommandSchema,
@@ -8,6 +8,7 @@ import {
 const validBrief = {
   eventType: "wedding_guest",
   eventDate: "2099-06-12",
+  eventStartsAt: "2099-06-13T00:00:00.000Z",
   dressCode: "formal",
   budgetMinCents: 4_000,
   budgetMaxCents: 12_000,
@@ -49,7 +50,12 @@ const validListing = {
 } as const;
 
 describe("createBriefCommandSchema", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("accepts a normalized future event brief", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2099-06-11T00:00:00.000Z"));
+
     expect(createBriefCommandSchema.parse(validBrief)).toMatchObject(validBrief);
   });
 
@@ -57,6 +63,42 @@ describe("createBriefCommandSchema", () => {
     expect(
       createBriefCommandSchema.safeParse({ ...validBrief, eventDate: "2000-01-01" }).success,
     ).toBe(false);
+  });
+
+  it("rejects an event timestamp in the past", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2099-06-11T12:00:00.000Z"));
+
+    const result = createBriefCommandSchema.safeParse({
+      ...validBrief,
+      eventStartsAt: "2099-06-11T11:00:00.000Z",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(
+      expect.objectContaining({
+        path: ["eventStartsAt"],
+        message: "Event must be within the next 90 days",
+      }),
+    );
+  });
+
+  it("rejects an event timestamp beyond 90 days", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2099-06-11T00:00:00.000Z"));
+
+    const result = createBriefCommandSchema.safeParse({
+      ...validBrief,
+      eventStartsAt: "2099-09-10T00:00:01.000Z",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(
+      expect.objectContaining({
+        path: ["eventStartsAt"],
+        message: "Event must be within the next 90 days",
+      }),
+    );
   });
 
   it("rejects a minimum budget above the maximum", () => {

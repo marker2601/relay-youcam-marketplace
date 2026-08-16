@@ -47,6 +47,7 @@ class MemoryStore implements ObjectStore {
 const validCommand = {
   eventType: "wedding_guest",
   eventDate: "2026-09-20",
+  eventStartsAt: "2026-09-20T23:00:00.000Z",
   dressCode: "formal",
   budgetMinCents: 5_000,
   budgetMaxCents: 12_000,
@@ -185,7 +186,7 @@ describe("POST /api/briefs", () => {
     expect(body).toMatchObject({ outcome: "matched", matchCount: 3 });
     const persistedBriefs = await testDb.select().from(eventBriefs);
     expect(persistedBriefs).toHaveLength(1);
-    expect(persistedBriefs[0]!.eventStartsAt.toISOString()).toBe("2026-09-21T00:00:00.000Z");
+    expect(persistedBriefs[0]!.eventStartsAt.toISOString()).toBe("2026-09-20T23:00:00.000Z");
     expect(await testDb.select().from(matches)).toHaveLength(3);
     expect((await testDb.select().from(mediaObjects)).filter((media) => media.kind === "brief_source"))
       .toHaveLength(1);

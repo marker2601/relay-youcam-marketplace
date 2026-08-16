@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { TenthsCm } from "@/lib/domain/contracts";
+import { classifyEventUrgency } from "@/lib/domain/assurance";
 
 const tagSchema = z
   .string()
@@ -84,6 +85,7 @@ export const createBriefCommandSchema = z
   .strictObject({
     eventType: eventTypeSchema,
     eventDate: dateSchema.refine((value) => value > todayInChicago(), "Event date must be future"),
+    eventStartsAt: dateTimeSchema,
     dressCode: dressCodeSchema,
     budgetMinCents: centsSchema,
     budgetMaxCents: centsSchema,
@@ -98,6 +100,17 @@ export const createBriefCommandSchema = z
     photoConsent: z.literal(true),
   })
   .superRefine((value, context) => {
+    try {
+      classifyEventUrgency(new Date(value.eventStartsAt), new Date());
+    } catch (error) {
+      if (error instanceof RangeError) {
+        context.addIssue({
+          code: "custom",
+          path: ["eventStartsAt"],
+          message: error.message,
+        });
+      }
+    }
     if (value.budgetMinCents > value.budgetMaxCents) {
       context.addIssue({
         code: "custom",

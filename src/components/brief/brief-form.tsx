@@ -3,6 +3,7 @@
 import { useRef, useState, type FormEvent } from "react";
 
 import { ImageGuidance } from "@/components/brief/image-guidance";
+import { chicagoLocalDateTimeToIso, classifyEventUrgency } from "@/lib/domain/assurance";
 
 export type SubmitBrief = (payload: FormData) => Promise<{ briefId: string }>;
 export type ReplaceBriefPhoto = (briefId: string, payload: FormData) => Promise<void>;
@@ -222,7 +223,21 @@ export function BriefForm({
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
+  const [eventDate, setEventDate] = useState("");
+  const [eventTime, setEventTime] = useState("19:00");
   const photoInput = useRef<HTMLInputElement>(null);
+
+  let urgency: string | null = null;
+  if (eventDate && eventTime) {
+    try {
+      urgency = classifyEventUrgency(
+        new Date(chicagoLocalDateTimeToIso(eventDate, eventTime)),
+        new Date(),
+      ).replaceAll("_", " ");
+    } catch {
+      urgency = null;
+    }
+  }
 
   function removePhoto() {
     setPhoto(null);
@@ -234,6 +249,7 @@ export function BriefForm({
     const form = new FormData(event.currentTarget);
     const nextErrors: Record<string, string> = {};
     if (!text(form, "eventDate")) nextErrors.eventDate = "Choose your event date.";
+    if (!text(form, "eventTime")) nextErrors.eventTime = "Choose your event time.";
     if (!text(form, "budgetMin") || !text(form, "budgetMax")) {
       nextErrors.budget = "Add your minimum and maximum budget.";
     }
@@ -255,6 +271,7 @@ export function BriefForm({
     const command = {
       eventType: text(form, "eventType"),
       eventDate: text(form, "eventDate"),
+      eventStartsAt: chicagoLocalDateTimeToIso(text(form, "eventDate"), text(form, "eventTime")),
       dressCode: text(form, "dressCode"),
       budgetMinCents: Math.round(numberValue(form, "budgetMin") * 100),
       budgetMaxCents: Math.round(numberValue(form, "budgetMax") * 100),
@@ -314,9 +331,28 @@ export function BriefForm({
         </label>
         <label>
           Event date
-          <input name="eventDate" type="date" aria-describedby="event-date-error" />
+          <input
+            name="eventDate"
+            type="date"
+            value={eventDate}
+            onChange={(event) => setEventDate(event.currentTarget.value)}
+            aria-describedby="event-date-error"
+          />
         </label>
         {errors.eventDate && <p id="event-date-error" className="field-error">{errors.eventDate}</p>}
+        <label>
+          Event time (Chicago)
+          <input
+            name="eventTime"
+            type="time"
+            value={eventTime}
+            onChange={(event) => setEventTime(event.currentTarget.value)}
+            required
+            aria-describedby="event-time-error"
+          />
+        </label>
+        {errors.eventTime && <p id="event-time-error" className="field-error">{errors.eventTime}</p>}
+        {urgency && <p>Event timing: {urgency}</p>}
         <label>
           Dress code
           <select name="dressCode" defaultValue="formal">
