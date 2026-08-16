@@ -84,7 +84,7 @@ function todayInChicago(): string {
 export const createBriefCommandSchema = z
   .strictObject({
     eventType: eventTypeSchema,
-    eventDate: dateSchema.refine((value) => value > todayInChicago(), "Event date must be future"),
+    eventDate: dateSchema.refine((value) => value >= todayInChicago(), "Event date cannot be past"),
     eventStartsAt: dateTimeSchema,
     dressCode: dressCodeSchema,
     budgetMinCents: centsSchema,

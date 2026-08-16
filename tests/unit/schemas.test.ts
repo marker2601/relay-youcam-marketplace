@@ -65,12 +65,26 @@ describe("createBriefCommandSchema", () => {
     ).toBe(false);
   });
 
-  it("rejects an event timestamp in the past", () => {
+  it("accepts a future event time later today", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2099-06-11T12:00:00.000Z"));
+
+    expect(
+      createBriefCommandSchema.parse({
+        ...validBrief,
+        eventDate: "2099-06-11",
+        eventStartsAt: "2099-06-11T19:00:00.000Z",
+      }),
+    ).toMatchObject({ eventDate: "2099-06-11" });
+  });
+
+  it("rejects a past event time today", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2099-06-11T12:00:00.000Z"));
 
     const result = createBriefCommandSchema.safeParse({
       ...validBrief,
+      eventDate: "2099-06-11",
       eventStartsAt: "2099-06-11T11:00:00.000Z",
     });
 
