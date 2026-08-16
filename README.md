@@ -6,6 +6,13 @@ Relay is a two-sided reverse marketplace for circular occasionwear. A shopper de
 
 The business thesis is that virtual try-on is more valuable as a transaction trust layer for fragmented, one-of-one inventory than as another product-page effect. Relay's current business-model hypothesis is an 18% commission on completed rentals. A future version could add an event-assurance fee and route retailer returns or deadstock into local demand; neither expansion is implemented. Payments, shipping, identity checks, and damage protection are deliberately outside this prototype.
 
+## Judge links
+
+- Production: https://relay-youcam-marketplace.vercel.app
+- Public 2:25 demo: https://youtu.be/rtxc3_vG1a8
+- Devpost project: https://devpost.com/software/relay-xr7byl
+- Production evidence and submission assets: [`docs/submission/`](docs/submission/)
+
 ## What works
 
 - Shopper brief creation with explicit photo consent and JPEG/PNG validation.

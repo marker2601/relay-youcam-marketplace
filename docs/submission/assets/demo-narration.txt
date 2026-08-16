@@ -1,0 +1,15 @@
+Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities; Relay makes sure you have something to wear.
+
+One brief captures the event deadline, budget, category, measurements, location, and style. Relay privately stores the consented shopper photo. Providers never receive that source image or the shopper's measurements.
+
+Relay produces at most three explainable matches. It assigns the strongest as primary and prefers a different provider for the backup. Each preview uses YouCam Clothes version three through signed file registration and upload, task creation, bounded polling, and a private result copy. Readiness explains availability, measurement evidence, proximity, style, and confirmation. It does not guarantee physical fit.
+
+The shopper requests the primary. Relay preserves the backup and gives the owner a response deadline based on urgency. When this owner declines, no payment has been collected and the shopper's private data remains hidden.
+
+Instead of restarting, Relay reveals the already rendered backup. One authorized, idempotent action creates the backup request from the original plan, with no new search, upload, or YouCam generation.
+
+The independent backup provider accepts. Both sides converge on Event ready. In this prototype, that means provider-confirmed reservation intent, not guaranteed delivery or physical fit.
+
+Relay's current business hypothesis is an eighteen percent commission on completed rentals. Today it routes peer closets and boutique inventory. A future version can test an event-assurance fee and route retailer returns or local deadstock into urgent demand.
+
+Relay combines visual confidence with a resilient two-provider plan. Primary fails. Backup is ready.

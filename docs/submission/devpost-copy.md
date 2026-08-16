@@ -1,6 +1,6 @@
 # Relay — Devpost draft copy
 
-This is a local draft. Nothing in this file has been sent to Devpost.
+This copy is reflected in the live Devpost draft at https://devpost.com/software/relay-xr7byl.
 
 ## Title
 
@@ -98,11 +98,11 @@ Payments, deposits, payouts, shipping, delivery, identity verification, damage c
 
 - Repository: https://github.com/marker2601/relay-youcam-marketplace
 - Public demo: https://relay-youcam-marketplace.vercel.app
-- Demo video: **TODO — add the public 1–3 minute YouTube/Vimeo/Youku URL after recording**
+- Demo video: https://youtu.be/rtxc3_vG1a8 (public, 2:25, 1080p, copyright check passed).
 - Project start date: August 14, 2026 (first repository commit).
 - App status: existing Relay prototype with a major Relay Rescue update begun August 16, 2026.
 - Submitter type: **TODO — user-only Devpost answer**
 - Country of residence: **TODO — user-only Devpost answer**
-- Required screenshots and thumbnail: **TODO — capture the verified production recovery story**
+- Required screenshots and thumbnail: uploaded to the Devpost draft from `docs/submission/assets/`.
 
 Official deadline: August 17, 2026 at 15:45 UTC.

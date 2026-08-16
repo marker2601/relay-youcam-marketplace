@@ -43,9 +43,18 @@ Use project-owned visuals only. Place the Relay wordmark and short line **Primar
 
 ## Final asset QA
 
-- [ ] All required states come from the final production commit.
-- [ ] At least one visible result used the real YouCam Clothes v3 path.
-- [ ] Primary and backup providers are demonstrably different.
-- [ ] Text is readable at Devpost preview size.
-- [ ] No personal photo, secret, signed URL, object key, or developer console is visible.
-- [ ] Every screenshot has concise alt text in the submission.
+- [x] All required states come from the final production commit.
+- [x] At least one visible result used the real YouCam Clothes v3 path.
+- [x] Primary and backup providers are demonstrably different.
+- [x] Text is readable at Devpost preview size.
+- [x] No personal photo, secret, signed URL, object key, or developer console is visible.
+- [x] Every screenshot has a concise caption in the submission.
+
+## Final asset paths
+
+- `docs/submission/assets/01-relay-rescue-hero-v2.png`
+- `docs/submission/assets/02-real-youcam-primary-backup.png`
+- `docs/submission/assets/03-primary-declined-backup-available.png`
+- `docs/submission/assets/04-backup-accepted-event-ready.png`
+- `docs/submission/assets/relay-rescue-thumbnail.png`
+- `docs/submission/assets/relay-rescue-demo.mp4`
