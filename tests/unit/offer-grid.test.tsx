@@ -120,6 +120,9 @@ describe("OfferGrid", () => {
         "Independent providers reduce the chance that one cancellation leaves you without a plan",
       ),
     ).toBeVisible();
+    expect(screen.getAllByRole("button", { name: /^Request / })).toHaveLength(1);
+    expect(within(cards[0]!).getByRole("button", { name: /^Request / })).toBeVisible();
+    expect(within(cards[1]!).queryByRole("button", { name: /^Request / })).not.toBeInTheDocument();
   });
 
   it("truthfully identifies a plan without backup protection", () => {
@@ -145,8 +148,33 @@ describe("OfferGrid", () => {
       ),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByText("Primary and backup currently come from the same provider"),
+      screen.getByText(/Primary only.*widen budget, radius, or category to add protection/),
     ).toBeVisible();
+    expect(screen.queryByText("Backup look")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /^Request / })).toHaveLength(1);
+  });
+
+  it("keeps the primary closed until its independent backup preview is ready", () => {
+    const buildingBackup = snapshot(["ready", "generating", "ready"]);
+
+    render(<OfferGrid snapshot={buildingBackup} onImageExpired={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: /^Request / })).not.toBeInTheDocument();
+    expect(screen.getByText(/finishing your independent backup/i)).toBeVisible();
+  });
+
+  it("turns migrated alternative defaults into one coherent requestable plan", () => {
+    const migrated = snapshot(
+      ["ready", "ready", "ready"],
+      "active",
+      ["alternative", "alternative", "alternative"],
+    );
+
+    render(<OfferGrid snapshot={migrated} onImageExpired={vi.fn()} />);
+
+    expect(screen.getByText("Primary look")).toBeVisible();
+    expect(screen.getByText("Backup look")).toBeVisible();
+    expect(screen.getAllByRole("button", { name: /^Request / })).toHaveLength(1);
   });
 
   it("demotes stale failed roles after survivor rebalance without mutating the snapshot", () => {
@@ -198,11 +226,16 @@ describe("OfferGrid", () => {
     expect(screen.getAllByText(/not guaranteed physical fit/i)).toHaveLength(3);
   });
 
-  it("keeps partial failures in score order and leaves ready offers actionable", () => {
+  it("keeps partial failures in score order without opening before fallback is ready", () => {
     render(<OfferGrid snapshot={snapshot(["ready", "failed", "generating"])} onImageExpired={vi.fn()} />);
-    const cards = screen.getAllByRole("article");
+    const cards = [
+      document.querySelector<HTMLElement>('article[data-assurance-role="primary"]'),
+      document.querySelector<HTMLElement>('article[data-offer-status="failed"]'),
+      document.querySelector<HTMLElement>('article[data-offer-status="generating"]'),
+    ];
+    expect(cards.every(Boolean)).toBe(true);
 
-    expect(within(cards[0]!).getByRole("button", { name: /request emerald satin midi/i })).toBeVisible();
+    expect(screen.queryByRole("button", { name: /^Request / })).not.toBeInTheDocument();
     expect(within(cards[1]!).getByText("Preview unavailable—garment can still be reviewed")).toBeVisible();
     expect(within(cards[1]!).getByText(/provider needs to replace this listing image/i)).toBeVisible();
     expect(within(cards[2]!).getByText("Preparing your preview")) .toBeVisible();

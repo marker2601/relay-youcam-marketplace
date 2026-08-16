@@ -97,6 +97,24 @@ describe("createBriefCommandSchema", () => {
     );
   });
 
+  it("rejects an event date that does not match the timestamp's Chicago date", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2099-06-11T00:00:00.000Z"));
+
+    const result = createBriefCommandSchema.safeParse({
+      ...validBrief,
+      eventDate: "2099-06-13",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(
+      expect.objectContaining({
+        path: ["eventDate"],
+        message: "Event date must match the event time in America/Chicago",
+      }),
+    );
+  });
+
   it("rejects an event timestamp beyond 90 days", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2099-06-11T00:00:00.000Z"));

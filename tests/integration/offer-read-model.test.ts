@@ -172,4 +172,43 @@ describe("authorized offer read model", () => {
     expect(snapshot.sourcePhotoNeedsReplacement).toBe(true);
     expect(JSON.stringify(snapshot)).not.toContain("invalid_source");
   });
+
+  it("keeps a post-event offer history readable", async () => {
+    await testDb
+      .update(eventBriefs)
+      .set({ eventStartsAt: new Date("2026-08-14T12:00:00.000Z") })
+      .where(eq(eventBriefs.id, briefId));
+
+    await expect(
+      getAuthorizedOfferSnapshot(
+        testDb,
+        { userId: seedIds.shopper, role: "shopper" },
+        briefId,
+        new RecordingObjectStore(),
+        now,
+      ),
+    ).resolves.toMatchObject({
+      eventStartsAt: "2026-08-14T12:00:00.000Z",
+      urgency: "tonight",
+    });
+  });
+
+  it("projects coherent roles for ready offers migrated with alternative defaults", async () => {
+    await testDb.update(offers).set({ assuranceRole: "alternative" });
+
+    const snapshot = await getAuthorizedOfferSnapshot(
+      testDb,
+      { userId: seedIds.shopper, role: "shopper" },
+      briefId,
+      new RecordingObjectStore(),
+      now,
+    );
+
+    expect(snapshot.assuranceCoverage).toBe("primary_and_backup");
+    expect(snapshot.offers.map((offer) => offer.assuranceRole)).toEqual([
+      "primary",
+      "backup",
+      "alternative",
+    ]);
+  });
 });

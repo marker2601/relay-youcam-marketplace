@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getServerEnv } from "@/lib/config/env";
 import { createDatabaseConnection, type DatabaseConnection } from "@/lib/db/client";
 import { actorFromRequest } from "@/lib/http/request-auth";
+import { reservationDetailSchema } from "@/lib/domain/schemas";
 import { NotFoundError } from "@/lib/repositories/briefs";
 import { ReservationConflictError, ReservationRepository } from "@/lib/repositories/reservations";
 
@@ -24,7 +25,8 @@ export async function POST(
   }
   connection ??= createDatabaseConnection(env.DATABASE_URL);
   try {
-    return Response.json(await new ReservationRepository(connection.db).request(actor, id.data, key, now));
+    const detail = await new ReservationRepository(connection.db).request(actor, id.data, key, now);
+    return Response.json(reservationDetailSchema.parse(detail));
   } catch (error) {
     if (error instanceof NotFoundError) return Response.json({ code: "not_found" }, { status: 404 });
     if (error instanceof ReservationConflictError) return Response.json({ code: "reservation_conflict" }, { status: 409 });

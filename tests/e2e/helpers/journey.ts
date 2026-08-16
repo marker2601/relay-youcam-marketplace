@@ -83,7 +83,12 @@ export async function createBrief(page: Page): Promise<string> {
 }
 
 export async function waitForReadyOffers(page: Page, count = 3): Promise<void> {
-  await expect(page.getByRole("button", { name: /^Request / })).toHaveCount(count, {
+  await expect(page.locator('article[data-offer-status="ready"]')).toHaveCount(count, {
     timeout: 60_000,
   });
+  await expect(
+    page.locator('article[data-assurance-role="primary"]').getByRole("button", {
+      name: /^Request /,
+    }),
+  ).toHaveCount(1);
 }

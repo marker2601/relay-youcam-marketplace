@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import type {
   OfferCard,
-  ProviderRequest,
-  ReservationDetail,
   TenthsCm,
 } from "@/lib/domain/contracts";
 import {
@@ -11,6 +9,8 @@ import {
   offerSnapshotSchema,
   providerRequestSchema,
   reservationDetailSchema,
+  type ProviderReservationRequest,
+  type ReservationDetail,
 } from "@/lib/domain/schemas";
 import {
   ConflictHttpError,
@@ -28,6 +28,7 @@ const ids = {
   listing: "10000000-0000-4000-8000-000000000003",
   provider: "10000000-0000-4000-8000-000000000004",
   reservation: "10000000-0000-4000-8000-000000000005",
+  backupOffer: "10000000-0000-4000-8000-000000000006",
 } as const;
 
 const cm = (value: number) => value as TenthsCm;
@@ -179,8 +180,12 @@ describe("public API response contracts", () => {
       id: ids.offer,
       reservationId: ids.reservation,
       status: "reservation_requested",
+      offerStatus: "reservation_requested",
+      assuranceRole: "primary",
       eventType: "wedding_guest",
       eventDate: "2099-06-12",
+      eventStartsAt: "2099-06-12T00:00:00.000Z",
+      urgency: "planned",
       dressCode: "formal",
       sizeLabel: "M",
       listingId: ids.listing,
@@ -188,19 +193,9 @@ describe("public API response contracts", () => {
       rentalPriceCents: 7_800,
       pickupDate: "2099-06-11T05:00:00.000Z",
       returnDate: "2099-06-14T05:00:00.000Z",
-      assuranceRole: "primary",
-      eventStartsAt: "2099-06-12T00:00:00.000Z",
-      urgency: "planned",
-      readiness: {
-        availability: 35,
-        measurements: 25,
-        proximity: 20,
-        style: 10,
-        confirmation: 10,
-        total: 100,
-      },
       responseDueAt: "2099-06-10T22:00:00.000Z",
-    } satisfies ProviderRequest;
+      hasBackup: true,
+    } satisfies ProviderReservationRequest;
 
     const parsed = providerRequestSchema.parse(request);
     expect(parsed).not.toHaveProperty("shopperMediaId");
@@ -211,31 +206,34 @@ describe("public API response contracts", () => {
     const reservation = {
       id: ids.reservation,
       offerId: ids.offer,
+      offerStatus: "accepted",
+      assuranceRole: "primary",
       status: "confirmed",
       garmentTitle: "Emerald satin midi",
       providerDisplayName: "West Loop Wardrobe",
       providerType: "boutique",
       eventDate: "2099-06-12",
+      eventStartsAt: "2099-06-12T00:00:00.000Z",
+      urgency: "planned",
       pickupDate: "2099-06-11T05:00:00.000Z",
       returnDate: "2099-06-14T05:00:00.000Z",
       rentalPriceCents: 7_800,
       depositDisplayCents: 4_000,
-      simulation: true,
-      assuranceRole: "primary",
-      eventStartsAt: "2099-06-12T00:00:00.000Z",
-      urgency: "planned",
-      readiness: {
-        availability: 35,
-        measurements: 25,
-        proximity: 20,
-        style: 10,
-        confirmation: 10,
-        total: 100,
-      },
       responseDueAt: "2099-06-10T22:00:00.000Z",
+      backupOfferId: ids.backupOffer,
+      backup: {
+        offerId: ids.backupOffer,
+        title: "Midnight tailored jumpsuit",
+        providerDisplayName: "Jordan Lee",
+      },
+      canActivateBackup: false,
+      supersedesReservationId: null,
+      simulation: true,
     } satisfies ReservationDetail;
 
-    expect(reservationDetailSchema.parse(reservation).simulation).toBe(true);
+    const parsed = reservationDetailSchema.parse(reservation);
+    expect(parsed.simulation).toBe(true);
+    expect(parsed.backup?.offerId).toBe(ids.backupOffer);
   });
 
   it.each([

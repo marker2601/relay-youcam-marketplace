@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 
 import { OfferCard } from "@/components/offers/offer-card";
+import { assignAssuranceRoles } from "@/lib/domain/assurance";
 import type { OfferSnapshot } from "@/lib/repositories/offer-read";
 
 export interface BriefRefinement {
@@ -23,18 +24,36 @@ const assuranceRoleOrder = {
 function normalizePresentationRoles(
   offers: OfferSnapshot["offers"],
 ): OfferSnapshot["offers"] {
-  const activeRoles = new Set<"primary" | "backup">();
-
+  const activeOffers = offers.filter(
+    (offer) => offer.status !== "failed" && offer.status !== "expired",
+  );
+  const activePrimary = activeOffers.filter((offer) => offer.assuranceRole === "primary");
+  const activeBackup = activeOffers.filter((offer) => offer.assuranceRole === "backup");
+  const primaryProviderId = activePrimary[0]?.provider.id;
+  const independentCandidateExists =
+    primaryProviderId !== undefined &&
+    activeOffers.some(
+      (offer) => offer.id !== activePrimary[0]?.id && offer.provider.id !== primaryProviderId,
+    );
+  const persistedRolesAreCoherent =
+    activePrimary.length === 1 &&
+    (independentCandidateExists
+      ? activeBackup.length === 1 && activeBackup[0]!.provider.id !== primaryProviderId
+      : activeBackup.length === 0);
+  const roles = persistedRolesAreCoherent
+    ? new Map(activeOffers.map((offer) => [offer.id, offer.assuranceRole]))
+    : assignAssuranceRoles(
+        [...activeOffers]
+          .sort(
+            (left, right) =>
+              right.scoreBasisPoints - left.scoreBasisPoints ||
+              left.listingId.localeCompare(right.listingId),
+          )
+          .map((offer) => ({ id: offer.id, providerId: offer.provider.id })),
+      );
   return offers.map((offer) => {
-    const role = offer.assuranceRole;
-    if (role === "alternative") return offer;
-    const ownsActiveRole =
-      offer.status !== "failed" && offer.status !== "expired" && !activeRoles.has(role);
-    if (ownsActiveRole) {
-      activeRoles.add(role);
-      return offer;
-    }
-    return { ...offer, assuranceRole: "alternative" };
+    const assuranceRole = roles.get(offer.id) ?? "alternative";
+    return assuranceRole === offer.assuranceRole ? offer : { ...offer, assuranceRole };
   });
 }
 
@@ -80,6 +99,13 @@ export function OfferGrid({ snapshot, refinement, onRefine, onImageExpired }: Of
   const backup = orderedOffers.find((offer) => offer.assuranceRole === "backup");
   const usesIndependentProviders =
     primary !== undefined && backup !== undefined && primary.provider.id !== backup.provider.id;
+  const backupReady =
+    backup !== undefined && backup.status === "ready" && Boolean(backup.resultImageUrl);
+  const primaryCanRequest =
+    primary !== undefined &&
+    primary.status === "ready" &&
+    Boolean(primary.resultImageUrl) &&
+    (backup === undefined || backupReady);
 
   async function submitRefinement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -172,6 +198,7 @@ export function OfferGrid({ snapshot, refinement, onRefine, onImageExpired }: Of
                 offer={offer}
                 eventStartsAt={snapshot.eventStartsAt}
                 urgency={snapshot.urgency}
+                canRequest={offer.id === primary?.id && primaryCanRequest}
                 onImageExpired={onImageExpired}
               />
             ))}

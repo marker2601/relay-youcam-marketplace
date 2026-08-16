@@ -1,4 +1,4 @@
-import { and, eq, inArray, lte, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte, ne, or } from "drizzle-orm";
 
 import type { Actor } from "@/lib/auth/demo-session";
 import type { Database } from "@/lib/db/client";
@@ -12,13 +12,22 @@ import {
   tryOnJobs,
   users,
 } from "@/lib/db/schema";
-import { classifyEventUrgency, responseWindowMs } from "@/lib/domain/assurance";
+import {
+  assignAssuranceRoles,
+  calculateResponseDeadline,
+  classifyEventUrgency,
+  classifyEventUrgencyForDisplay,
+} from "@/lib/domain/assurance";
 import type {
-  AssuranceRole,
-  EventUrgency,
   OfferStatus,
   ReservationStatus,
 } from "@/lib/domain/contracts";
+import {
+  providerRequestSchema,
+  reservationDetailSchema,
+  type ProviderReservationRequest,
+  type ReservationDetail,
+} from "@/lib/domain/schemas";
 import { transitionOffer, transitionReservation } from "@/lib/domain/state-machines";
 import { NotFoundError } from "@/lib/repositories/briefs";
 
@@ -29,50 +38,7 @@ export class ReservationConflictError extends Error {
   }
 }
 
-export interface ReservationDetail {
-  id: string;
-  offerId: string;
-  offerStatus: OfferStatus;
-  assuranceRole: AssuranceRole;
-  status: "requested" | "confirmed" | "ready_for_pickup" | "in_use" | "returned" | "cancelled";
-  garmentTitle: string;
-  providerDisplayName: string;
-  providerType: "peer" | "boutique";
-  eventDate: string;
-  eventStartsAt: string;
-  urgency: EventUrgency;
-  pickupDate: string;
-  returnDate: string;
-  rentalPriceCents: number;
-  depositDisplayCents: number;
-  responseDueAt: string;
-  backupOfferId: string | null;
-  backup: { offerId: string; title: string; providerDisplayName: string } | null;
-  canActivateBackup: boolean;
-  supersedesReservationId: string | null;
-  simulation: true;
-}
-
-export interface ProviderReservationRequest {
-  id: string;
-  reservationId: string;
-  status: "reservation_requested" | "accepted" | "declined" | "expired";
-  offerStatus: OfferStatus;
-  assuranceRole: AssuranceRole;
-  eventType: "wedding_guest" | "cocktail_party" | "gala" | "holiday_party";
-  eventDate: string;
-  eventStartsAt: string;
-  urgency: EventUrgency;
-  dressCode: "cocktail" | "formal" | "semi_formal" | "festive";
-  sizeLabel: string;
-  listingId: string;
-  listingTitle: string;
-  rentalPriceCents: number;
-  pickupDate: string;
-  returnDate: string;
-  responseDueAt: string;
-  hasBackup: boolean;
-}
+export type { ProviderReservationRequest, ReservationDetail } from "@/lib/domain/schemas";
 
 function addCalendarDays(dateOnly: string, days: number): string {
   const [year, month, day] = dateOnly.split("-").map(Number);
@@ -103,6 +69,18 @@ function chicagoNoon(dateOnly: string): Date {
     value("second"),
   );
   return new Date(desired + (desired - observedAsUtc));
+}
+
+function responseDeadlineForEvent(eventStartsAt: Date, now: Date): Date {
+  try {
+    const urgency = classifyEventUrgency(eventStartsAt, now);
+    return calculateResponseDeadline(eventStartsAt, now, urgency);
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw new ReservationConflictError("The event has already started or is outside Relay's 90-day window");
+    }
+    throw error;
+  }
 }
 
 function isSerializationFailure(error: unknown): boolean {
@@ -277,7 +255,7 @@ export class ReservationRepository {
       };
     });
     if (!row || !row.providerType) throw new NotFoundError();
-    return {
+    return reservationDetailSchema.parse({
       id: row.id,
       offerId: row.offerId,
       offerStatus: row.offerStatus,
@@ -288,7 +266,7 @@ export class ReservationRepository {
       providerType: row.providerType,
       eventDate: row.eventDate,
       eventStartsAt: row.eventStartsAt.toISOString(),
-      urgency: classifyEventUrgency(row.eventStartsAt, now),
+      urgency: classifyEventUrgencyForDisplay(row.eventStartsAt, now),
       pickupDate: row.pickupDate.toISOString(),
       returnDate: row.returnDate.toISOString(),
       rentalPriceCents: row.rentalPriceCents,
@@ -311,7 +289,7 @@ export class ReservationRepository {
         !row.hasSuccessor,
       supersedesReservationId: row.supersedesReservationId,
       simulation: true,
-    };
+    });
   }
 
   async request(
@@ -360,45 +338,70 @@ export class ReservationRepository {
       if (sameOffer) return sameOffer.id;
 
       const [existingSelection] = await transaction
-        .select({ id: reservations.id })
+        .select({ id: reservations.id, status: reservations.status })
         .from(reservations)
         .where(
           and(
             eq(reservations.briefId, candidate.briefId),
             eq(reservations.shopperId, actor.userId),
-            ne(reservations.status, "cancelled"),
           ),
         )
         .limit(1);
-      if (existingSelection) throw new ReservationConflictError();
+      if (existingSelection) {
+        throw new ReservationConflictError(
+          existingSelection.status === "cancelled"
+            ? "Use the designated backup recovery path for this event"
+            : undefined,
+        );
+      }
       if (candidate.offerStatus !== "ready") {
         throw new ReservationConflictError("Only a ready offer can be requested");
       }
-      if (candidate.assuranceRole !== "primary") {
-        throw new ReservationConflictError("Only the primary offer can be requested first");
-      }
-      transitionOffer(candidate.offerStatus, "reservation_requested");
 
-      const [backup] = await transaction
-        .select({ id: offers.id })
+      const plan = await transaction
+        .select({
+          id: offers.id,
+          status: offers.status,
+          assuranceRole: offers.assuranceRole,
+          providerId: listings.providerId,
+        })
         .from(offers)
         .innerJoin(matches, eq(matches.id, offers.matchId))
+        .innerJoin(listings, eq(listings.id, matches.listingId))
         .where(
           and(
             eq(matches.briefId, candidate.briefId),
             eq(matches.briefRevision, candidate.briefRevision),
-            eq(offers.assuranceRole, "backup"),
-            eq(offers.status, "ready"),
-            ne(offers.id, offerId),
+            inArray(offers.status, ["matched", "generating", "ready"]),
           ),
         )
-        .limit(1)
+        .orderBy(desc(matches.scoreBasisPoints), asc(matches.listingId))
         .for("update", { of: offers });
+      const roles = assignAssuranceRoles(plan);
+      if (roles.get(candidate.offerId) !== "primary") {
+        throw new ReservationConflictError("Only the primary offer can be requested first");
+      }
+      const designatedBackup = plan.find((offer) => roles.get(offer.id) === "backup");
+      if (designatedBackup && designatedBackup.status !== "ready") {
+        throw new ReservationConflictError(
+          "The independent backup preview must be ready before requesting the primary",
+        );
+      }
+      for (const plannedOffer of plan) {
+        const assuranceRole = roles.get(plannedOffer.id) ?? "alternative";
+        if (plannedOffer.assuranceRole !== assuranceRole) {
+          await transaction
+            .update(offers)
+            .set({ assuranceRole })
+            .where(eq(offers.id, plannedOffer.id));
+        }
+      }
+      transitionOffer(candidate.offerStatus, "reservation_requested");
 
       const pickupDate = chicagoNoon(addCalendarDays(candidate.eventDate, -1));
       const eventDate = chicagoNoon(candidate.eventDate);
       const returnDate = chicagoNoon(addCalendarDays(candidate.eventDate, 1));
-      const urgency = classifyEventUrgency(candidate.eventStartsAt, now);
+      const responseDueAt = responseDeadlineForEvent(candidate.eventStartsAt, now);
       const [created] = await transaction
         .insert(reservations)
         .values({
@@ -412,8 +415,8 @@ export class ReservationRepository {
           rentalPriceCents: candidate.rentalPriceCents,
           depositDisplayCents: candidate.depositDisplayCents,
           status: "requested",
-          responseDueAt: new Date(now.getTime() + responseWindowMs(urgency)),
-          backupOfferId: backup?.id ?? null,
+          responseDueAt,
+          backupOfferId: designatedBackup?.id ?? null,
           supersedesReservationId: null,
           createdAt: now,
         })
@@ -664,7 +667,7 @@ export class ReservationRepository {
         }
 
         transitionOffer(backup.status, "reservation_requested");
-        const urgency = classifyEventUrgency(original.eventStartsAt, now);
+        const responseDueAt = responseDeadlineForEvent(original.eventStartsAt, now);
         const [created] = await transaction
           .insert(reservations)
           .values({
@@ -678,7 +681,7 @@ export class ReservationRepository {
             rentalPriceCents: backup.rentalPriceCents,
             depositDisplayCents: backup.depositDisplayCents,
             status: "requested",
-            responseDueAt: new Date(now.getTime() + responseWindowMs(urgency)),
+            responseDueAt,
             backupOfferId: null,
             supersedesReservationId: original.id,
             createdAt: now,
@@ -775,17 +778,17 @@ export class ReservationRepository {
       );
     return rows.map((row) => {
       const { backupOfferId, ...publicRow } = row;
-      return {
+      return providerRequestSchema.parse({
         ...publicRow,
         status: row.status as ProviderReservationRequest["status"],
         offerStatus: row.status,
         eventStartsAt: row.eventStartsAt.toISOString(),
-        urgency: classifyEventUrgency(row.eventStartsAt, now),
+        urgency: classifyEventUrgencyForDisplay(row.eventStartsAt, now),
         pickupDate: row.pickupDate.toISOString(),
         returnDate: row.returnDate.toISOString(),
         responseDueAt: row.responseDueAt.toISOString(),
         hasBackup: backupOfferId !== null,
-      };
+      });
     });
   }
 
@@ -851,7 +854,7 @@ export class ReservationRepository {
         return { ...selected, offerStatus: reconciled.offerStatus };
       }, { isolationLevel: "serializable" }),
     );
-    return {
+    return providerRequestSchema.parse({
       id: row.id,
       reservationId: row.reservationId,
       status: row.offerStatus as ProviderReservationRequest["status"],
@@ -860,7 +863,7 @@ export class ReservationRepository {
       eventType: row.eventType,
       eventDate: row.eventDate,
       eventStartsAt: row.eventStartsAt.toISOString(),
-      urgency: classifyEventUrgency(row.eventStartsAt, now),
+      urgency: classifyEventUrgencyForDisplay(row.eventStartsAt, now),
       dressCode: row.dressCode,
       sizeLabel: row.sizeLabel,
       listingId: row.listingId,
@@ -870,6 +873,6 @@ export class ReservationRepository {
       returnDate: row.returnDate.toISOString(),
       responseDueAt: row.responseDueAt.toISOString(),
       hasBackup: row.backupOfferId !== null,
-    };
+    });
   }
 }

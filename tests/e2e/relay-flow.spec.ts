@@ -30,6 +30,8 @@ test("a declined primary activates an independent backup and reaches Event ready
   expect(primaryProviderId).toBeTruthy();
   expect(backupProviderId).toBeTruthy();
   expect(primaryProviderId).not.toBe(backupProviderId);
+  await expect(shopper.getByRole("button", { name: /^Request / })).toHaveCount(1);
+  await expect(backup.getByRole("button", { name: /^Request / })).toHaveCount(0);
 
   await primary.getByRole("button", { name: /^Request / }).click();
   await expect(shopper).toHaveURL(/\/reservations\/[0-9a-f-]+$/);
@@ -151,7 +153,7 @@ test("partial failure, unauthorized direct access, and privacy deletion remain i
   await failOnePreview(briefId);
   await shopper.reload();
   await expect(shopper.getByText(/provider needs to replace this listing image/i)).toBeVisible();
-  await expect(shopper.getByRole("button", { name: /^Request / })).toHaveCount(2);
+  await expect(shopper.getByRole("button", { name: /^Request / })).toHaveCount(1);
 
   const providerContext = await browser.newContext();
   const provider = await providerContext.newPage();

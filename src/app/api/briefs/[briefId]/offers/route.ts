@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getServerEnv } from "@/lib/config/env";
 import { createDatabaseConnection, type Database, type DatabaseConnection } from "@/lib/db/client";
 import { actorFromRequest } from "@/lib/http/request-auth";
+import { offerSnapshotSchema } from "@/lib/domain/schemas";
 import { NotFoundError } from "@/lib/repositories/briefs";
 import { getAuthorizedOfferSnapshot } from "@/lib/repositories/offer-read";
 import type { ObjectStore } from "@/lib/storage/object-store";
@@ -26,9 +27,14 @@ export function createOfferGetHandler(options: OfferGetHandlerOptions) {
     const id = z.uuid().safeParse((await context.params).briefId);
     if (!id.success) return Response.json({ code: "not_found" }, { status: 404 });
     try {
-      return Response.json(
-        await getAuthorizedOfferSnapshot(options.db, actor, id.data, options.objectStore),
+      const snapshot = await getAuthorizedOfferSnapshot(
+        options.db,
+        actor,
+        id.data,
+        options.objectStore,
+        new Date(options.now?.() ?? Date.now()),
       );
+      return Response.json(offerSnapshotSchema.parse(snapshot));
     } catch (error) {
       if (error instanceof NotFoundError) {
         return Response.json({ code: "not_found" }, { status: 404 });

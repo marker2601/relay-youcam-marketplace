@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import type { Actor } from "@/lib/auth/demo-session";
@@ -15,8 +15,9 @@ import {
 import { NotFoundError } from "@/lib/repositories/briefs";
 import type { ObjectStore } from "@/lib/storage/object-store";
 import {
+  assignAssuranceRoles,
   calculateReadiness,
-  classifyEventUrgency,
+  classifyEventUrgencyForDisplay,
   type AssuranceCoverage,
 } from "@/lib/domain/assurance";
 
@@ -81,24 +82,38 @@ export async function getAuthorizedOfferSnapshot(
         eq(matches.briefRevision, brief.revision),
       ),
     )
-    .orderBy(
-      sql`case ${offers.assuranceRole} when 'primary' then 0 when 'backup' then 1 else 2 end`,
-      desc(matches.scoreBasisPoints),
-      asc(matches.listingId),
-    )
+    .orderBy(desc(matches.scoreBasisPoints), asc(matches.listingId))
     .limit(3);
 
+  const effectiveRoles = assignAssuranceRoles(
+    rows
+      .filter((row) => row.status !== "failed" && row.status !== "expired")
+      .map((row) => ({ id: row.id, providerId: row.providerId })),
+  );
+  const roleOrder = { primary: 0, backup: 1, alternative: 2 } as const;
+  const normalizedRows = rows
+    .map((row) => ({
+      ...row,
+      assuranceRole: effectiveRoles.get(row.id) ?? ("alternative" as const),
+    }))
+    .sort((left, right) =>
+      roleOrder[left.assuranceRole] - roleOrder[right.assuranceRole] ||
+      right.scoreBasisPoints - left.scoreBasisPoints ||
+      left.listingId.localeCompare(right.listingId),
+    );
   const activeRoles = new Set(
-    rows.filter((row) => row.status !== "failed").map((row) => row.assuranceRole),
+    normalizedRows
+      .filter((row) => row.status !== "failed" && row.status !== "expired")
+      .map((row) => row.assuranceRole),
   );
   const assuranceCoverage: AssuranceCoverage =
     activeRoles.has("primary") && activeRoles.has("backup")
       ? "primary_and_backup"
       : "primary_only";
-  const urgency = classifyEventUrgency(brief.eventStartsAt, now);
+  const urgency = classifyEventUrgencyForDisplay(brief.eventStartsAt, now);
 
   const signedOffers = await Promise.all(
-    rows.map(async (row) => ({
+    normalizedRows.map(async (row) => ({
       id: row.id,
       listingId: row.listingId,
       status: row.status,
@@ -154,7 +169,7 @@ export async function getAuthorizedOfferSnapshot(
     eventStartsAt: brief.eventStartsAt.toISOString(),
     urgency,
     assuranceCoverage,
-    sourcePhotoNeedsReplacement: rows.some(
+    sourcePhotoNeedsReplacement: normalizedRows.some(
       (row) => row.status === "failed" && row.normalizedErrorCode === "invalid_source",
     ),
     offers: signedOffers,

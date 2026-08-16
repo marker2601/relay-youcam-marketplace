@@ -1,6 +1,5 @@
 /** Measurements cross domain boundaries as integer tenths of one centimeter. */
 import type {
-  AssuranceCoverage,
   AssuranceRole,
   EventUrgency,
   ReadinessBreakdown,
@@ -82,46 +81,6 @@ export interface OfferCard {
   originalImageUrl: string;
   resultImageUrl: string | null;
   expiresAt: string;
-  assuranceRole: AssuranceRole;
-  eventStartsAt: string;
-  urgency: EventUrgency;
-  readiness: ReadinessBreakdown;
-  responseDueAt: string | null;
-}
-
-export interface ProviderRequest {
-  id: string;
-  reservationId: string | null;
-  status: OfferStatus;
-  eventType: EventType;
-  eventDate: string;
-  dressCode: DressCode;
-  sizeLabel: string;
-  listingId: string;
-  listingTitle: string;
-  rentalPriceCents: MoneyCents;
-  pickupDate: string;
-  returnDate: string;
-  assuranceRole: AssuranceRole;
-  eventStartsAt: string;
-  urgency: EventUrgency;
-  readiness: ReadinessBreakdown;
-  responseDueAt: string | null;
-}
-
-export interface ReservationDetail {
-  id: string;
-  offerId: string;
-  status: ReservationStatus;
-  garmentTitle: string;
-  providerDisplayName: string;
-  providerType: ProviderType;
-  eventDate: string;
-  pickupDate: string;
-  returnDate: string;
-  rentalPriceCents: MoneyCents;
-  depositDisplayCents: MoneyCents;
-  simulation: true;
   assuranceRole: AssuranceRole;
   eventStartsAt: string;
   urgency: EventUrgency;

@@ -5,6 +5,10 @@ import { eventBriefs, matches, mediaObjects, offers, reservations, tryOnJobs } f
 import type { Actor } from "@/lib/auth/demo-session";
 import type { TenthsCm } from "@/lib/domain/contracts";
 import {
+  providerRequestSchema,
+  reservationDetailSchema,
+} from "@/lib/domain/schemas";
+import {
   ListingEditConflictError,
   ListingRepository,
 } from "@/lib/repositories/listings";
@@ -205,6 +209,83 @@ describe("reservation selection and provider decision", () => {
     ).rejects.toBeInstanceOf(ReservationConflictError);
 
     expect(await testDb.select().from(reservations)).toHaveLength(0);
+  });
+
+  it("waits for an independent designated backup before opening the primary request", async () => {
+    await testDb
+      .update(offers)
+      .set({ status: "generating" })
+      .where(eq(offers.id, graph.offerIds[1]!));
+
+    await expect(
+      new ReservationRepository(testDb).request(
+        shopper,
+        graph.offerIds[0]!,
+        "backup-still-generating",
+        now,
+      ),
+    ).rejects.toBeInstanceOf(ReservationConflictError);
+
+    expect(await testDb.select().from(reservations)).toHaveLength(0);
+    expect(
+      (await testDb.select().from(offers).where(eq(offers.id, graph.offerIds[2]!)))[0]!.status,
+    ).toBe("ready");
+  });
+
+  it("repairs migrated alternative roles before accepting the visible primary", async () => {
+    await testDb.update(offers).set({ assuranceRole: "alternative" });
+    const repository = new ReservationRepository(testDb);
+
+    const selected = await repository.request(
+      shopper,
+      graph.offerIds[0]!,
+      "request-migrated-primary",
+      now,
+    );
+
+    expect(selected.backupOfferId).toBe(graph.offerIds[1]);
+    const persisted = await testDb
+      .select({ id: offers.id, role: offers.assuranceRole })
+      .from(offers)
+      .innerJoin(matches, eq(matches.id, offers.matchId));
+    expect(new Map(persisted.map((row) => [row.id, row.role]))).toEqual(new Map([
+      [graph.offerIds[0]!, "primary"],
+      [graph.offerIds[1]!, "backup"],
+      [graph.offerIds[2]!, "alternative"],
+    ]));
+  });
+
+  it("caps a response deadline at an event that starts inside the normal window", async () => {
+    const eventStartsAt = new Date(now.getTime() + 5 * 60_000);
+    await testDb
+      .update(eventBriefs)
+      .set({ eventDate: "2026-08-15", eventStartsAt })
+      .where(eq(eventBriefs.id, briefId));
+
+    const selected = await new ReservationRepository(testDb).request(
+      shopper,
+      graph.offerIds[0]!,
+      "near-event-deadline",
+      now,
+    );
+
+    expect(selected.responseDueAt).toBe(eventStartsAt.toISOString());
+  });
+
+  it("rejects a stale request after the event instead of leaking a range error", async () => {
+    await testDb
+      .update(eventBriefs)
+      .set({ eventDate: "2026-08-14", eventStartsAt: new Date("2026-08-14T12:00:00.000Z") })
+      .where(eq(eventBriefs.id, briefId));
+
+    await expect(
+      new ReservationRepository(testDb).request(
+        shopper,
+        graph.offerIds[0]!,
+        "post-event-request",
+        now,
+      ),
+    ).rejects.toBeInstanceOf(ReservationConflictError);
   });
 
   it("activates one backup only after primary decline and repeats the same response concurrently", async () => {
@@ -532,6 +613,55 @@ describe("reservation selection and provider decision", () => {
     expect(accepted.status).toBe("confirmed");
     expect((await testDb.select().from(offers).where(eq(offers.id, selected.offerId)))[0]!.status).toBe("accepted");
     expect((await testDb.select().from(reservations))[0]!.status).toBe("confirmed");
+  });
+
+  it("keeps accepted shopper and provider history readable after the event", async () => {
+    const eventStartsAt = new Date(now.getTime() + 2 * 60 * 60_000);
+    await testDb
+      .update(eventBriefs)
+      .set({ eventDate: "2026-08-15", eventStartsAt })
+      .where(eq(eventBriefs.id, briefId));
+    const repository = new ReservationRepository(testDb);
+    const selected = await repository.request(
+      shopper,
+      graph.offerIds[0]!,
+      "post-event-history-request",
+      now,
+    );
+    await repository.decide(
+      boutique,
+      selected.id,
+      "accept",
+      "post-event-history-accept",
+      now,
+    );
+    const afterEvent = new Date(eventStartsAt.getTime() + 60_000);
+
+    const shopperHistory = await repository.getDetail(shopper, selected.id, afterEvent);
+    const providerHistory = await repository.listProviderRequests(boutique, afterEvent);
+    const providerDetail = await repository.getProviderRequestByOfferId(
+      boutique,
+      selected.offerId,
+      afterEvent,
+    );
+
+    expect(shopperHistory.status).toBe("confirmed");
+    expect(providerHistory).toHaveLength(1);
+    expect(providerDetail.status).toBe("accepted");
+  });
+
+  it("validates actual repository recovery responses against canonical schemas", async () => {
+    const repository = new ReservationRepository(testDb);
+    const selected = await repository.request(
+      shopper,
+      graph.offerIds[0]!,
+      "canonical-response-request",
+      now,
+    );
+    const [providerRequest] = await repository.listProviderRequests(boutique, now);
+
+    expect(reservationDetailSchema.parse(selected)).toEqual(selected);
+    expect(providerRequestSchema.parse(providerRequest)).toEqual(providerRequest);
   });
 
   it("maps decline to a declined offer and cancelled reservation", async () => {

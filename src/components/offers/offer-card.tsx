@@ -48,11 +48,12 @@ interface OfferCardProps {
   offer: OfferSnapshotItem;
   eventStartsAt: string;
   urgency: OfferSnapshot["urgency"];
+  canRequest: boolean;
   onImageExpired: () => void;
 }
 
-export function OfferCard({ offer, eventStartsAt, urgency, onImageExpired }: OfferCardProps) {
-  const ready = offer.status === "ready" && offer.resultImageUrl;
+export function OfferCard({ offer, eventStartsAt, urgency, canRequest, onImageExpired }: OfferCardProps) {
+  const ready = offer.status === "ready" && Boolean(offer.resultImageUrl);
   const failed = offer.status === "failed";
   const isAssuredLook = offer.assuranceRole !== "alternative";
 
@@ -61,6 +62,7 @@ export function OfferCard({ offer, eventStartsAt, urgency, onImageExpired }: Off
       className={`offer-card offer-card--${offer.status} offer-card--role-${offer.assuranceRole}`}
       data-assurance-role={offer.assuranceRole}
       data-provider-id={offer.provider.id}
+      data-offer-status={offer.status}
     >
       <div className="offer-image-stage">
         {ready ? (
@@ -201,11 +203,19 @@ export function OfferCard({ offer, eventStartsAt, urgency, onImageExpired }: Off
         </details>
 
         <p className="fit-disclaimer">{fitDisclaimer}</p>
-        {ready ? (
+        {ready && canRequest ? (
           <ReserveOfferButton offerId={offer.id} garmentTitle={offer.title} />
         ) : (
           <p className="offer-action-note">
-            {failed ? "Review the garment details while the preview is unavailable." : "This card will update automatically."}
+            {failed
+              ? "Review the garment details while the preview is unavailable."
+              : ready && offer.assuranceRole === "backup"
+                ? "Kept ready for one-tap recovery if the primary fails."
+                : ready && offer.assuranceRole === "alternative"
+                  ? "Available to review; Relay requests the primary first."
+                  : ready
+                    ? "Relay is finishing your independent backup before requests open."
+                    : "This card will update automatically."}
           </p>
         )}
       </div>

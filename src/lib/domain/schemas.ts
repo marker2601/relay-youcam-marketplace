@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { TenthsCm } from "@/lib/domain/contracts";
-import { classifyEventUrgency } from "@/lib/domain/assurance";
+import { chicagoDateForInstant, classifyEventUrgency } from "@/lib/domain/assurance";
 
 const tagSchema = z
   .string()
@@ -107,8 +107,16 @@ export const createBriefCommandSchema = z
     photoConsent: z.literal(true),
   })
   .superRefine((value, context) => {
+    const eventStartsAt = new Date(value.eventStartsAt);
+    if (chicagoDateForInstant(eventStartsAt) !== value.eventDate) {
+      context.addIssue({
+        code: "custom",
+        path: ["eventDate"],
+        message: "Event date must match the event time in America/Chicago",
+      });
+    }
     try {
-      classifyEventUrgency(new Date(value.eventStartsAt), new Date());
+      classifyEventUrgency(eventStartsAt, new Date());
     } catch (error) {
       if (error instanceof RangeError) {
         context.addIssue({
@@ -249,10 +257,14 @@ export const offerCardSchema = z.strictObject({
 
 export const providerRequestSchema = z.strictObject({
   id: z.uuid(),
-  reservationId: z.uuid().nullable(),
-  status: offerStatusSchema,
+  reservationId: z.uuid(),
+  status: z.enum(["reservation_requested", "accepted", "declined", "expired"]),
+  offerStatus: offerStatusSchema,
+  assuranceRole: assuranceRoleSchema,
   eventType: eventTypeSchema,
   eventDate: dateSchema,
+  eventStartsAt: dateTimeSchema,
+  urgency: eventUrgencySchema,
   dressCode: dressCodeSchema,
   sizeLabel: z.string().min(1),
   listingId: z.uuid(),
@@ -260,31 +272,36 @@ export const providerRequestSchema = z.strictObject({
   rentalPriceCents: centsSchema,
   pickupDate: dateTimeSchema,
   returnDate: dateTimeSchema,
-  assuranceRole: assuranceRoleSchema,
-  eventStartsAt: dateTimeSchema,
-  urgency: eventUrgencySchema,
-  readiness: readinessBreakdownSchema,
-  responseDueAt: dateTimeSchema.nullable(),
+  responseDueAt: dateTimeSchema,
+  hasBackup: z.boolean(),
 });
 
 export const reservationDetailSchema = z.strictObject({
   id: z.uuid(),
   offerId: z.uuid(),
+  offerStatus: offerStatusSchema,
+  assuranceRole: assuranceRoleSchema,
   status: reservationStatusSchema,
   garmentTitle: z.string().min(1),
   providerDisplayName: z.string().min(1),
   providerType: providerTypeSchema,
   eventDate: dateSchema,
+  eventStartsAt: dateTimeSchema,
+  urgency: eventUrgencySchema,
   pickupDate: dateTimeSchema,
   returnDate: dateTimeSchema,
   rentalPriceCents: centsSchema,
   depositDisplayCents: centsSchema,
+  responseDueAt: dateTimeSchema,
+  backupOfferId: z.uuid().nullable(),
+  backup: z.strictObject({
+    offerId: z.uuid(),
+    title: z.string().min(1),
+    providerDisplayName: z.string().min(1),
+  }).nullable(),
+  canActivateBackup: z.boolean(),
+  supersedesReservationId: z.uuid().nullable(),
   simulation: z.literal(true),
-  assuranceRole: assuranceRoleSchema,
-  eventStartsAt: dateTimeSchema,
-  urgency: eventUrgencySchema,
-  readiness: readinessBreakdownSchema,
-  responseDueAt: dateTimeSchema.nullable(),
 });
 
 export type CreateBriefCommand = z.infer<typeof createBriefCommandSchema>;
@@ -294,5 +311,7 @@ export type AcceptReservationCommand = z.infer<typeof acceptReservationCommandSc
 export type ActivateBackupCommand = z.infer<typeof activateBackupCommandSchema>;
 export type OfferSnapshotResponse = z.infer<typeof offerSnapshotSchema>;
 export type OfferCardResponse = z.infer<typeof offerCardSchema>;
-export type ProviderRequestResponse = z.infer<typeof providerRequestSchema>;
-export type ReservationDetailResponse = z.infer<typeof reservationDetailSchema>;
+export type ProviderReservationRequest = z.infer<typeof providerRequestSchema>;
+export type ReservationDetail = z.infer<typeof reservationDetailSchema>;
+export type ProviderRequestResponse = ProviderReservationRequest;
+export type ReservationDetailResponse = ReservationDetail;

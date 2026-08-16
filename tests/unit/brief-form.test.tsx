@@ -127,6 +127,24 @@ describe("BriefForm", () => {
       eventStartsAt: expect.stringMatching(/^2026-09-2[01]T/),
     });
   });
+
+  it("shows an inline error instead of submitting a nonexistent Chicago wall time", async () => {
+    const user = userEvent.setup();
+    const submitBrief = vi.fn<SubmitBrief>();
+    render(<BriefForm submitBrief={submitBrief} />);
+
+    await fillRequired(user);
+    const eventDate = screen.getByLabelText("Event date");
+    const eventTime = screen.getByLabelText("Event time (Chicago)");
+    await user.clear(eventDate);
+    await user.type(eventDate, "2027-03-14");
+    await user.clear(eventTime);
+    await user.type(eventTime, "02:30");
+    await user.click(screen.getByRole("button", { name: "Find my matches" }));
+
+    expect(screen.getByText("Choose a Chicago time that exists and occurs only once.")).toBeInTheDocument();
+    expect(submitBrief).not.toHaveBeenCalled();
+  });
 });
 
 describe("BriefDeletionControl", () => {

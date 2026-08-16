@@ -268,10 +268,24 @@ export function BriefForm({
     setServerError(null);
     if (Object.keys(nextErrors).length > 0 || !photo) return;
 
+    let eventStartsAt: string;
+    try {
+      eventStartsAt = chicagoLocalDateTimeToIso(
+        text(form, "eventDate"),
+        text(form, "eventTime"),
+      );
+    } catch {
+      setErrors({
+        ...nextErrors,
+        eventTime: "Choose a Chicago time that exists and occurs only once.",
+      });
+      return;
+    }
+
     const command = {
       eventType: text(form, "eventType"),
       eventDate: text(form, "eventDate"),
-      eventStartsAt: chicagoLocalDateTimeToIso(text(form, "eventDate"), text(form, "eventTime")),
+      eventStartsAt,
       dressCode: text(form, "dressCode"),
       budgetMinCents: Math.round(numberValue(form, "budgetMin") * 100),
       budgetMaxCents: Math.round(numberValue(form, "budgetMax") * 100),
