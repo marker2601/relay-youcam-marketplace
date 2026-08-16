@@ -28,6 +28,7 @@ const allowedOfferTransitions = new Set([
   "ready->expired",
   "reservation_requested->accepted",
   "reservation_requested->declined",
+  "reservation_requested->expired",
 ]);
 
 const reservationStatuses: ReservationStatus[] = [

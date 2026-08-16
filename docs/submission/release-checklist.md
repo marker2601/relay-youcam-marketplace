@@ -1,116 +1,91 @@
-# Relay release checklist
+# Relay Rescue release checklist
 
-Last updated: August 15, 2026. This document separates verified evidence from work that still requires production credentials or human assets.
+Last updated: August 16, 2026. This separates fresh local evidence, previously completed production checks, and release actions still owned by the coordinator.
 
-## Automated release evidence
+## Fresh local verification
 
-- [x] Strict TypeScript: `npm run typecheck`.
-- [x] ESLint: `npm run lint`.
-- [x] Unit/contract/component suite: 15 files, 134 tests passed.
-- [x] PostgreSQL integration suite: 10 files, 55 tests passed.
-- [x] Next.js production build completed successfully.
-- [x] Playwright: 14/14 Chromium desktop/mobile journeys passed.
-- [x] E2E fixtures contain no personal image; they reuse an original project-generated garment asset and an in-memory synthetic invalid image.
-- [x] Secret scan found no API key, cloud credential, private key, signed URL, or `.env` file in tracked source.
-- [x] Local bucket initialization disables anonymous access; a direct known-object request returned HTTP 403.
+- [x] Strict TypeScript: `npm.cmd run typecheck` exited 0.
+- [x] ESLint: `npm.cmd run lint` exited 0 with zero errors and four existing unused-variable warnings.
+- [x] Full Vitest suite: 28 files and 237 tests passed.
+- [x] Next.js 16.3.1 production build compiled and generated all routes successfully.
+- [x] Full Playwright suite: 16/16 desktop/mobile/accessibility scenarios passed, including decline-to-backup recovery.
+- [x] Exact tracked-artifact and secret-pattern checks were inspected: only the intentionally tracked `.env.example` matched the artifact expression; assignment matches were safe placeholders or command documentation, with no production values.
+- [x] CI pins Node.js 20; repository dependencies require Node 20.19 or newer, which is compatible with the configured Node 20 runner.
 
-## Functional and trust evidence
+## Relay Rescue behavior gate
 
-- [x] At most three deterministic offers with visible score explanations.
-- [x] Shopper request and owning-provider acceptance converge on one confirmed reservation.
-- [x] Duplicate reserve/accept clicks return one durable resource.
-- [x] Another role cannot read a private brief or mutate its reservation.
-- [x] Providers cannot fetch the shopper's source image or measurement profile.
-- [x] Invalid photo recovery preserves the remaining brief.
-- [x] No-match widening does not require another upload.
-- [x] One failed preview remains isolated beside two requestable offers.
-- [x] Expired result URLs receive one refresh attempt before a bounded retry.
-- [x] Deletion revokes Relay media references before best-effort object cleanup.
-- [x] The UI states YouCam's maximum 30-day upstream retention separately from Relay deletion.
-- [x] The generated result always carries the appearance-not-fit disclaimer.
-- [x] Reservation screens clearly state that payment has not been collected.
+- [x] The home page leads with the exact reliability promise.
+- [x] Briefs require an explicit America/Chicago event time in the next 90 days.
+- [x] A three-match plan assigns one primary and prefers an independent-provider backup.
+- [x] Readiness totals are bounded and component labels are visible.
+- [x] Requesting the primary preserves the backup and expires only alternatives.
+- [x] Provider requests show urgency, response deadline, and that a backup exists without identifying its provider.
+- [x] Decline and timeout permit one authorized, idempotent backup activation.
+- [x] Backup activation reuses the existing preview and requires no new upload.
+- [x] The independent backup provider can accept and the shopper reaches **Event ready**.
+- [x] Providers never receive shopper source media or measurement profiles.
+- [x] Photo deletion still revokes source and generated Relay media.
+- [x] The UI states that previews show appearance/styling, not guaranteed physical fit.
+- [x] Reservation screens state that no payment has been collected.
 
-## Production infrastructure gate
+## Production evidence and release operations
 
-- [ ] Provision a TLS PostgreSQL database.
-- [ ] Provision a private S3-compatible bucket with least-privilege credentials.
-- [ ] Verify anonymous `GET` to a known production object returns `403`/`AccessDenied`.
-- [ ] Generate a new 32+ byte `SESSION_SECRET`.
-- [ ] Configure every production variable listed in `.env.example` as a server-only secret/value.
-- [ ] Set `APP_TIME_ZONE=America/Chicago`, `DEMO_MODE=true`, and `YOUCAM_MODE=live`.
-- [ ] Link the Vercel project and deploy a preview.
-- [ ] Run `npm run db:migrate` once against production.
-- [ ] Run the idempotent `npm run db:seed` once against production.
-- [ ] Validate the preview, then promote that exact artifact to production.
-- [ ] Put the production URL in `PLAYWRIGHT_BASE_URL` and run a smoke target.
+- [x] Production URL exists: https://relay-youcam-marketplace.vercel.app.
+- [x] Production PostgreSQL and private object storage were configured before this documentation task.
+- [x] RLS was enabled with no public policies before this documentation task.
+- [x] A real YouCam Clothes v3 success path was completed within the approved credit budget before this documentation task.
+- [ ] Push the final reviewed commit and deploy it through the existing Vercel project.
+- [ ] Run the production smoke suite against the exact deployed commit.
+- [ ] Re-run one real YouCam success path on that deployed commit within the approved credit budget.
+- [ ] Verify anonymous access to a known production object returns `403`/`AccessDenied`.
+- [ ] Verify the full primary-decline-backup-acceptance path produces no browser/runtime errors in production.
 
-Current blocker: no production PostgreSQL URL, S3 endpoint/credentials, or YouCam API key is available in this workspace. A static Vercel shell would not prove the judged flow, so no deployment is labeled ready until these server resources are configured.
+## Required visual assets
 
-## Real YouCam Clothes v3 smoke record
+- [ ] Hero screenshot visibly includes both exact sentences: **Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities; Relay makes sure you have something to wear.**
+- [ ] Primary and independent backup YouCam previews with readiness components.
+- [ ] Primary decline followed by visible **Backup available**.
+- [ ] Backup provider acceptance followed by **Event ready**.
+- [ ] Submission thumbnail derived from project-owned assets.
+- [ ] Public 1–3 minute 1080p YouTube/Vimeo/Youku demo showing and explaining YouCam.
+- [ ] Signed-out playback verifies the final video URL is public.
 
-Use one consented, non-sensitive test image. Record only the fields below—never the key, image, full task ID, signed URL, object key, upload headers, or measurement profile.
+Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 
-| Check | Result |
-| --- | --- |
-| File registration succeeded | **Pending real key** |
-| Signed source/reference PUT succeeded | **Pending real key** |
-| Task creation succeeded | **Pending real key** |
-| Bounded polling reached terminal status | **Pending real key** |
-| Result copied to private Relay storage | **Pending real key** |
-| Offer became ready | **Pending real key** |
-| Reservation request + provider acceptance succeeded | **Pending production deployment** |
-| Fresh signed Relay result URL authorized | **Pending production deployment** |
-| Source and result deletion made Relay URLs unavailable | **Pending production deployment** |
-| End-to-end latency | **Pending; record rounded seconds only** |
-| Task ID suffix | **Pending; last 6 characters only** |
-| Terminal result status | **Pending** |
-| Normalized errors observed | **Pending; code names only** |
+## Devpost form gate
 
-## Devpost requirements
-
-- [x] Account authenticated and registered for the YouCam API hackathon.
-- [x] Repository URL prepared.
-- [x] Text description covers features, functionality, and consumer/retail value.
-- [x] Public repo/license path prepared; final visibility change remains gated on the last secret scan.
-- [ ] Add the production demo URL (a website is optional in the official form, but useful to judges).
-- [ ] Capture 3–5 screenshots from the functioning app, including one real generated result.
-- [ ] Record a public 1–3 minute YouTube/Vimeo/Youku video with the YouCam API explained.
-- [ ] Confirm the video contains no unlicensed music, third-party marks, credentials, or private URLs.
-- [ ] Fill submitter type and country of residence.
-- [ ] Optionally add a social post URL.
-- [ ] Submit before August 17, 2026 at 11:45 AM EDT.
+- [x] Repository URL: https://github.com/marker2601/relay-youcam-marketplace.
+- [x] Public demo URL: https://relay-youcam-marketplace.vercel.app.
+- [x] Product description, API surprise, underexplored use case, and technical wall are drafted truthfully.
+- [x] Project start date derived from git history: August 14, 2026.
+- [x] App status is documented as an existing Relay prototype with a major Rescue update begun August 16, 2026.
+- [ ] User supplies submitter type.
+- [ ] User supplies country of residence.
+- [ ] Add final screenshots, thumbnail, and public video URL.
+- [ ] Confirm repository visibility or judge access.
+- [ ] Confirm the exact submitted copy contains no guarantees or unimplemented retailer-return claim.
+- [ ] Obtain the user's final explicit `yes, submit` immediately before the irreversible submit action.
+- [ ] Submit before August 17, 2026 at 15:45 UTC.
 
 ## Four-criterion judging gate
 
-| Criterion | Evidence | Status |
+| Criterion | Evidence | Status before final production pass |
 | --- | --- | --- |
-| Technological implementation | Typed Clothes v3 client; persisted top-three orchestration; schema-validated contracts; retries, refresh, private copy, deletion; 189 unit/integration tests. | **Conditional pass** — real-key smoke still required |
-| Design | Complete shopper/provider loop; editorial responsive UI; accessible focus/labels/live regions; independent failure states; 14 E2E journeys. | **Pass** |
-| Potential impact | Specific occasionwear audience, two compatible provider types, one-city liquidity wedge, 18% commission hypothesis, measurable outcomes without unsupported claims. | **Pass** |
-| Quality of idea | Demand-first marketplace uses VTO as trust infrastructure across fragmented circular inventory, not a catalog wrapper. | **Pass** |
+| Technological implementation | Typed Clothes v3 adapter; persisted jobs and private copy; stable assurance roles; bounded readiness; transactional expiry and idempotent failover; deterministic recovery E2E. | Local suite passed; final production rerun pending |
+| Coherent design | One visible promise connects the brief, primary/backup plan, provider deadline, recovery, and **Event ready** outcome. | Implemented; screenshots pending |
+| Potential impact | Bounded occasionwear wedge, independent-provider resilience, 18% commission hypothesis, measurable conversion and completion outcomes. | Copy ready; market validation remains a hypothesis |
+| Quality/non-obviousness | YouCam is the visual trust layer inside a demand-first, failure-tolerant two-sided marketplace rather than a catalog widget. | Implemented; video proof pending |
 
-## Media and final audit
+## Exact local release commands
 
-- [ ] Desktop shortlist screenshot with real result.
-- [ ] Mobile comparison screenshot with real result and disclaimer.
-- [ ] Provider request screenshot without shopper media.
-- [ ] Confirmed timeline screenshot.
-- [ ] Privacy/deletion screenshot.
-- [ ] Public video URL added to `docs/submission/devpost-copy.md`.
-- [ ] Public demo URL added to README and Devpost copy.
-- [ ] Fresh secret/history scan passes.
-- [ ] Repository is public, or `contact_event@PerfectCorp.com` has access while it remains private.
-- [ ] Incognito clone/setup and demo access verified.
-- [ ] GitHub Actions is green on the final commit.
+```powershell
+npm.cmd run typecheck
+npm.cmd run lint
+npm.cmd test
+npm.cmd run build
+npm.cmd run test:e2e
 
-## Clean release gate
-
-```bash
-npm ci
-npm run typecheck
-npm run lint
-npm run test:unit
-npm run test:integration
-npm run build
-npm run test:e2e
+git status --short
+git ls-files | rg "(^|/)\.env($|\.)|\.vercel/|node_modules/|test-results/|playwright-report/"
+rg -n --hidden -g '!node_modules/**' -g '!.git/**' "YOUCAM_API_KEY=|S3_SECRET_ACCESS_KEY=|SESSION_SECRET=" .
 ```

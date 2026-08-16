@@ -1,3 +1,9 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
+
+import { DeadlineCountdown } from "@/components/assurance/deadline-countdown";
 import type { ReservationDetail } from "@/lib/repositories/reservations";
 
 function money(cents: number): string {
@@ -17,42 +23,102 @@ function date(value: string): string {
   }).format(new Date(value));
 }
 
-const statusLabels: Record<ReservationDetail["status"], string> = {
-  requested: "Request sent",
-  confirmed: "Confirmed",
+const baseStatusLabels: Record<ReservationDetail["status"], string> = {
+  requested: "Awaiting owner confirmation",
+  confirmed: "Event ready",
   ready_for_pickup: "Ready for pickup",
   in_use: "With you",
   returned: "Returned",
-  cancelled: "Cancelled",
+  cancelled: "Plan interrupted",
 };
+
+type ActivateBackup = (reservationId: string) => Promise<{ id: string }>;
+
+class ReservationChangedError extends Error {}
 
 interface ReservationTimelineProps {
   reservation: ReservationDetail;
+  activateBackup?: ActivateBackup;
 }
 
-export function ReservationTimeline({ reservation }: ReservationTimelineProps) {
+async function postBackup(reservationId: string): Promise<{ id: string }> {
+  const response = await fetch(`/api/reservations/${reservationId}/backup`, {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+  });
+  if (response.status === 409) throw new ReservationChangedError();
+  if (!response.ok) throw new Error("The backup look could not be activated.");
+  let body: unknown;
+  try {
+    body = await response.json() as unknown;
+  } catch {
+    throw new Error("The backup look could not be activated.");
+  }
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("id" in body) ||
+    typeof body.id !== "string" ||
+    body.id.length === 0
+  ) {
+    throw new Error("The backup look could not be activated.");
+  }
+  return { id: body.id };
+}
+
+export function ReservationTimeline({
+  reservation,
+  activateBackup = postBackup,
+}: ReservationTimelineProps) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pendingRef = useRef(false);
+  const backupAvailable = reservation.status === "cancelled" && reservation.canActivateBackup;
+  const currentLabel = backupAvailable ? "Backup available" : baseStatusLabels[reservation.status];
+  const isBackupRequest = reservation.supersedesReservationId !== null;
   const steps: Array<{ status: ReservationDetail["status"]; label: string }> =
     reservation.status === "cancelled"
       ? [
-          { status: "requested", label: "Request sent" },
-          { status: "cancelled", label: "Cancelled" },
+          { status: "requested", label: "Awaiting owner confirmation" },
+          { status: "cancelled", label: currentLabel },
         ]
       : [
-          { status: "requested", label: "Request sent" },
-          { status: "confirmed", label: "Confirmed" },
+          { status: "requested", label: "Awaiting owner confirmation" },
+          { status: "confirmed", label: "Event ready" },
           { status: "ready_for_pickup", label: "Ready for pickup" },
           { status: "in_use", label: "With you" },
           { status: "returned", label: "Returned" },
         ];
   const currentIndex = steps.findIndex((step) => step.status === reservation.status);
 
+  async function activate() {
+    if (!backupAvailable || pendingRef.current) return;
+    pendingRef.current = true;
+    setPending(true);
+    setError(null);
+    try {
+      const activated = await activateBackup(reservation.id);
+      router.push(`/reservations/${activated.id}`);
+    } catch (caught) {
+      if (caught instanceof ReservationChangedError) {
+        setError("This reservation changed. Refreshing the latest status.");
+        router.refresh();
+        return;
+      }
+      setError(caught instanceof Error ? caught.message : "The backup look could not be activated.");
+      setPending(false);
+      pendingRef.current = false;
+    }
+  }
+
   return (
     <section className="reservation-timeline" aria-labelledby="reservation-status-title">
       <div className="reservation-status-heading">
-        <p className="eyebrow">Reservation status</p>
-        <h2 id="reservation-status-title">{statusLabels[reservation.status]}</h2>
+        <p className="eyebrow">{isBackupRequest ? "Backup request" : "Reservation status"}</p>
+        <h2 id="reservation-status-title">{currentLabel}</h2>
         <p className="sr-only" role="status" aria-live="polite">
-          Current reservation state: {statusLabels[reservation.status]}
+          Current reservation state: {currentLabel}
         </p>
       </div>
 
@@ -70,11 +136,49 @@ export function ReservationTimeline({ reservation }: ReservationTimelineProps) {
       </ol>
 
       <dl className="reservation-facts">
+        <div><dt>Plan role</dt><dd>{isBackupRequest ? "Backup" : "Primary"}</dd></div>
         <div><dt>Pickup</dt><dd>{date(reservation.pickupDate)}</dd></div>
         <div><dt>Return</dt><dd>{date(reservation.returnDate)}</dd></div>
         <div><dt>Rental</dt><dd>{money(reservation.rentalPriceCents)} rental</dd></div>
         <div><dt>Deposit</dt><dd>{money(reservation.depositDisplayCents)} displayed deposit</dd></div>
+        {reservation.status === "requested" ? (
+          <div>
+            <dt>Owner response</dt>
+            <dd>
+              <DeadlineCountdown
+                target={reservation.responseDueAt}
+                completeLabel="Response window ended"
+                prefix="Respond in"
+              />
+            </dd>
+          </div>
+        ) : null}
       </dl>
+
+      {backupAvailable && reservation.backup ? (
+        <div className="return-expectations">
+          <h3>{reservation.backup.title}</h3>
+          <p>Request this backup look from {reservation.backup.providerDisplayName} without rebuilding your plan.</p>
+          <button
+            className="primary-action"
+            type="button"
+            onClick={activate}
+            disabled={pending}
+            aria-busy={pending}
+          >
+            Activate backup look
+          </button>
+          {pending ? <span className="sr-only" role="status">Activating backup look</span> : null}
+          {error ? <p className="form-error" role="alert">{error}</p> : null}
+        </div>
+      ) : null}
+
+      {reservation.status === "cancelled" && !backupAvailable ? (
+        <p className="empty-note">
+          Widen your plan by considering more styles, colors, or pickup options.
+        </p>
+      ) : null}
+
       <p className="simulation-disclosure">
         Reservation simulation—no payment has been collected
       </p>

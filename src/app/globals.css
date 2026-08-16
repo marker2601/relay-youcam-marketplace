@@ -281,9 +281,52 @@ h1 {
 
 .offer-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
   align-items: start;
+}
+
+.assurance-plan {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.assurance-plan__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.75fr);
+  align-items: end;
+  gap: 1.5rem;
+}
+
+.assurance-plan__summary > div {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.assurance-plan__summary h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.assurance-plan__resilience {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border-left: 4px solid var(--relay);
+  background: #edf5f0;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.assurance-plan__resilience strong {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .offer-card {
@@ -292,6 +335,33 @@ h1 {
   border-radius: var(--card-radius);
   background: #fffdf8;
   box-shadow: 0 0.6rem 1.8rem rgb(20 37 28 / 8%);
+}
+
+.offer-card--role-primary {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  border: 2px solid var(--relay);
+  box-shadow: 0 0.8rem 2.2rem rgb(20 37 28 / 13%);
+}
+
+.offer-card--role-primary .offer-image-stage {
+  min-height: clamp(26rem, 50vw, 42rem);
+  aspect-ratio: auto;
+}
+
+.offer-card--role-backup {
+  border-top: 4px solid var(--gold);
+}
+
+.offer-card--role-alternative {
+  align-self: start;
+  background: color-mix(in srgb, #fffdf8 82%, var(--paper));
+  box-shadow: none;
+}
+
+.offer-card--role-alternative .offer-image-stage {
+  aspect-ratio: 5 / 4;
 }
 
 .offer-image-stage {
@@ -348,6 +418,155 @@ h1 {
   display: grid;
   gap: 1rem;
   padding: 1.1rem;
+}
+
+.offer-card--role-primary .offer-card__body {
+  align-content: start;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.offer-card--role-alternative .offer-card__body {
+  gap: 0.75rem;
+}
+
+.assurance-role {
+  justify-self: start;
+  margin: 0;
+  padding: 0.38rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assurance-role--primary {
+  border-color: var(--relay);
+  background: var(--relay);
+  color: white;
+}
+
+.assurance-role--backup {
+  border-color: var(--gold);
+  background: #f5ecd8;
+}
+
+.assurance-role--alternative {
+  color: #536057;
+}
+
+.offer-timing {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: var(--paper);
+  color: #405048;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.urgency-label {
+  color: var(--coral);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.readiness-score {
+  display: grid;
+  min-width: 0;
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: #f9f6ef;
+}
+
+.readiness-score__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.readiness-score h3,
+.readiness-score p {
+  margin: 0;
+}
+
+.readiness-score h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.readiness-score__heading strong {
+  color: var(--relay);
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.readiness-meter {
+  width: 100%;
+  height: 0.8rem;
+  accent-color: var(--relay);
+}
+
+.readiness-meter::-webkit-meter-bar {
+  border: 0;
+  border-radius: 999px;
+  background: #dfe4df;
+}
+
+.readiness-meter::-webkit-meter-optimum-value {
+  border-radius: 999px;
+  background: var(--relay);
+}
+
+.readiness-meter::-moz-meter-bar {
+  border-radius: 999px;
+  background: var(--relay);
+}
+
+.readiness-score > p {
+  color: #536057;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.readiness-components {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.readiness-components div {
+  min-width: 0;
+}
+
+.readiness-components dt {
+  color: #68736c;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.readiness-components dd {
+  margin: 0.18rem 0 0;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
 }
 
 .offer-card__heading {
@@ -667,15 +886,30 @@ h1 {
   }
 }
 
-@media (max-width: 62rem) {
-  .offer-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (max-width: 56.25rem) {
+  .assurance-plan__summary,
+  .offer-grid,
+  .offer-card--role-primary {
+    grid-template-columns: 1fr;
+  }
+
+  .assurance-plan__summary {
+    align-items: start;
+  }
+
+  .offer-card--role-primary {
+    grid-column: auto;
+  }
+
+  .offer-card--role-primary .offer-image-stage,
+  .offer-card--role-alternative .offer-image-stage {
+    min-height: 0;
+    aspect-ratio: 4 / 5;
   }
 }
 
 @media (max-width: 44rem) {
   .offer-progress__intro,
-  .offer-grid,
   .refinement-form,
   .photo-replacement {
     grid-template-columns: 1fr;

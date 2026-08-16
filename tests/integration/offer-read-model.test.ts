@@ -52,6 +52,7 @@ beforeEach(async () => {
     shopperId: seedIds.shopper,
     eventType: "wedding_guest",
     eventDate: "2026-09-20",
+    eventStartsAt: new Date("2026-09-21T00:00:00.000Z"),
     dressCode: "formal",
     budgetMinCents: 5_000,
     budgetMaxCents: 12_000,
@@ -96,25 +97,36 @@ beforeEach(async () => {
   await testDb
     .update(tryOnJobs)
     .set({ status: "failed", normalizedErrorCode: "invalid_reference", completedAt: now })
-    .where(eq(tryOnJobs.id, graph.jobIds[1]!));
-  await testDb.update(offers).set({ status: "failed" }).where(eq(offers.id, graph.offerIds[1]!));
+    .where(eq(tryOnJobs.id, graph.jobIds[2]!));
+  await testDb.update(offers).set({ status: "failed" }).where(eq(offers.id, graph.offerIds[2]!));
 });
 afterAll(closeTestDatabase);
 
 describe("authorized offer read model", () => {
-  it("returns no more than three score-ordered offers with fresh signed Relay URLs", async () => {
+  it("projects an ordered assurance plan with explainable readiness", async () => {
     const store = new RecordingObjectStore();
     const snapshot = await getAuthorizedOfferSnapshot(
       testDb,
       { userId: seedIds.shopper, role: "shopper" },
       briefId,
       store,
+      now,
     );
 
     expect(snapshot.offers).toHaveLength(3);
-    expect(snapshot.offers.map((offer) => offer.scoreBasisPoints)).toEqual(
-      [...snapshot.offers.map((offer) => offer.scoreBasisPoints)].sort((a, b) => b - a),
-    );
+    expect(snapshot).toMatchObject({
+      reservationId: null,
+      eventStartsAt: "2026-09-21T00:00:00.000Z",
+      urgency: "planned",
+      assuranceCoverage: "primary_and_backup",
+    });
+    expect(snapshot.offers.map((offer) => offer.assuranceRole)).toEqual([
+      "primary",
+      "backup",
+      "alternative",
+    ]);
+    expect(snapshot.offers[0]!.readiness.total).toBeGreaterThanOrEqual(0);
+    expect(snapshot.offers[0]!.readiness.total).toBeLessThanOrEqual(100);
     expect(snapshot.offers.every((offer) => offer.originalImageUrl.startsWith("https://relay-storage.test/read/"))).toBe(true);
     expect(snapshot.offers.filter((offer) => offer.resultImageUrl)).toHaveLength(1);
     expect(snapshot.offers.find((offer) => offer.status === "ready")?.resultImageUrl).toContain(
@@ -139,6 +151,7 @@ describe("authorized offer read model", () => {
         { userId: seedIds.peerJordan, role: "shopper" },
         briefId,
         store,
+        now,
       ),
     ).rejects.toMatchObject({ name: "NotFoundError" });
     expect(store.signedKeys).toEqual([]);
@@ -154,9 +167,49 @@ describe("authorized offer read model", () => {
       { userId: seedIds.shopper, role: "shopper" },
       briefId,
       new RecordingObjectStore(),
+      now,
     );
 
     expect(snapshot.sourcePhotoNeedsReplacement).toBe(true);
     expect(JSON.stringify(snapshot)).not.toContain("invalid_source");
+  });
+
+  it("keeps a post-event offer history readable", async () => {
+    await testDb
+      .update(eventBriefs)
+      .set({ eventStartsAt: new Date("2026-08-14T12:00:00.000Z") })
+      .where(eq(eventBriefs.id, briefId));
+
+    await expect(
+      getAuthorizedOfferSnapshot(
+        testDb,
+        { userId: seedIds.shopper, role: "shopper" },
+        briefId,
+        new RecordingObjectStore(),
+        now,
+      ),
+    ).resolves.toMatchObject({
+      eventStartsAt: "2026-08-14T12:00:00.000Z",
+      urgency: "tonight",
+    });
+  });
+
+  it("projects coherent roles for ready offers migrated with alternative defaults", async () => {
+    await testDb.update(offers).set({ assuranceRole: "alternative" });
+
+    const snapshot = await getAuthorizedOfferSnapshot(
+      testDb,
+      { userId: seedIds.shopper, role: "shopper" },
+      briefId,
+      new RecordingObjectStore(),
+      now,
+    );
+
+    expect(snapshot.assuranceCoverage).toBe("primary_and_backup");
+    expect(snapshot.offers.map((offer) => offer.assuranceRole)).toEqual([
+      "primary",
+      "backup",
+      "alternative",
+    ]);
   });
 });

@@ -106,6 +106,7 @@ async function seedBaseGraph(): Promise<void> {
     shopperId: ids.shopper,
     eventType: "wedding_guest",
     eventDate: "2099-06-12",
+    eventStartsAt: new Date("2099-06-13T00:00:00.000Z"),
     dressCode: "formal",
     budgetMinCents: 4_000,
     budgetMaxCents: 12_000,
@@ -285,6 +286,7 @@ describe("database invariants", () => {
       rentalPriceCents: 7_800,
       depositDisplayCents: 4_000,
       status: "requested" as const,
+      responseDueAt: new Date("2099-06-11T04:00:00.000Z"),
     };
     await testDb.insert(reservations).values({
       ...reservationValues,

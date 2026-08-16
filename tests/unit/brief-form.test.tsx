@@ -11,6 +11,8 @@ import {
 
 async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Event date"), "2026-09-20");
+  await user.clear(screen.getByLabelText("Event time (Chicago)"));
+  await user.type(screen.getByLabelText("Event time (Chicago)"), "19:00");
   await user.type(screen.getByLabelText("Minimum budget (USD)"), "50");
   await user.type(screen.getByLabelText("Maximum budget (USD)"), "120");
   await user.type(screen.getByLabelText("Size label"), "M");
@@ -89,6 +91,7 @@ describe("BriefForm", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("at least 512 pixels");
     expect(screen.getByLabelText("Event date")).toHaveValue("2026-09-20");
+    expect(screen.getByLabelText("Event time (Chicago)")).toHaveValue("19:00");
     expect(screen.getByLabelText("Size label")).toHaveValue("M");
     expect(screen.getByLabelText("Bust (cm)")).toHaveValue(90);
     expect(screen.queryByText("source.png selected")).not.toBeInTheDocument();
@@ -106,6 +109,41 @@ describe("BriefForm", () => {
     await user.click(screen.getByRole("button", { name: "Find my matches" }));
 
     expect(onCreated).toHaveBeenCalledWith("11111111-1111-4111-8111-111111111111");
+  });
+
+  it("submits the shopper's Chicago event time as an ISO timestamp", async () => {
+    const user = userEvent.setup();
+    const submitBrief = vi.fn<SubmitBrief>().mockResolvedValue({
+      briefId: "11111111-1111-4111-8111-111111111111",
+    });
+    render(<BriefForm submitBrief={submitBrief} />);
+
+    await fillRequired(user);
+    await user.click(screen.getByRole("button", { name: "Find my matches" }));
+
+    const payload = submitBrief.mock.calls[0]?.[0];
+    expect(JSON.parse(String(payload?.get("command")))).toMatchObject({
+      eventDate: "2026-09-20",
+      eventStartsAt: expect.stringMatching(/^2026-09-2[01]T/),
+    });
+  });
+
+  it("shows an inline error instead of submitting a nonexistent Chicago wall time", async () => {
+    const user = userEvent.setup();
+    const submitBrief = vi.fn<SubmitBrief>();
+    render(<BriefForm submitBrief={submitBrief} />);
+
+    await fillRequired(user);
+    const eventDate = screen.getByLabelText("Event date");
+    const eventTime = screen.getByLabelText("Event time (Chicago)");
+    await user.clear(eventDate);
+    await user.type(eventDate, "2027-03-14");
+    await user.clear(eventTime);
+    await user.type(eventTime, "02:30");
+    await user.click(screen.getByRole("button", { name: "Find my matches" }));
+
+    expect(screen.getByText("Choose a Chicago time that exists and occurs only once.")).toBeInTheDocument();
+    expect(submitBrief).not.toHaveBeenCalled();
   });
 });
 

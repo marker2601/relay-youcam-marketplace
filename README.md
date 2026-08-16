@@ -1,17 +1,22 @@
 # Relay
 
-Relay is a two-sided reverse marketplace for circular occasionwear. A shopper describes an event, budget, style, and measurements once; Relay ranks no more than three locally available garments, explains every match, renders the strongest candidates with YouCam AI Clothes Virtual Try-On v3, and lets the owning provider approve a simulated reservation.
+**Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities; Relay makes sure you have something to wear.**
 
-The business thesis is that virtual try-on is more valuable as a transaction trust layer for fragmented, one-of-one inventory than as another product-page effect. Relay's launch hypothesis is an 18% commission on completed rentals. Payments, shipping, identity checks, and damage protection are deliberately outside this prototype.
+Relay is a two-sided reverse marketplace for circular occasionwear. A shopper describes an event deadline, budget, style, and measurements once. Relay turns that brief into a deliberately small plan: a primary look, an independent-provider backup when supply permits, and one alternative. YouCam AI Clothes Virtual Try-On v3 renders each candidate; explainable readiness scores and provider response deadlines make the next step clear. If the primary owner declines or times out, the shopper can activate the already-rendered backup without uploading another photo. An accepted request reaches **Event ready**.
+
+The business thesis is that virtual try-on is more valuable as a transaction trust layer for fragmented, one-of-one inventory than as another product-page effect. Relay's current business-model hypothesis is an 18% commission on completed rentals. A future version could add an event-assurance fee and route retailer returns or deadstock into local demand; neither expansion is implemented. Payments, shipping, identity checks, and damage protection are deliberately outside this prototype.
 
 ## What works
 
 - Shopper brief creation with explicit photo consent and JPEG/PNG validation.
+- Explicit America/Chicago event time, a 90-day horizon, and time-based urgency.
 - Deterministic hard filtering and weighted, explainable top-three ranking.
+- Stable primary, backup, and alternative roles, preferring a different provider for the backup.
+- Component-level Event Readiness Scores for availability, measurements, proximity, style, and provider confirmation.
 - A server-only YouCam Clothes v3 adapter for file registration, signed upload, task creation, polling, and private result copying.
 - Independent loading, success, and failure states for each preview.
-- Provider-owned listings and private request review without exposing the shopper's source image.
-- Idempotent reservation request, provider accept/decline, and a confirmed shopper timeline.
+- Provider-owned listings, urgency-aware response deadlines, and private request review without exposing the shopper's source image or measurements.
+- Idempotent primary requests, decline/timeout recovery, one-tap authorized backup activation, and an **Event ready** shopper timeline.
 - Owner-only image deletion with immediate application-level revocation and best-effort object cleanup.
 - A fully deterministic fake YouCam mode for local demos and automated tests.
 
@@ -102,7 +107,7 @@ npm run test:e2e
 npm run test:e2e:smoke
 ```
 
-Integration and E2E tests expect the local PostgreSQL and MinIO services above. Install the E2E browser once with `npx playwright install chromium`. The Playwright suite runs Chromium at desktop and mobile device sizes, uses generated/project-owned imagery only, and covers the complete shopper/provider handshake, invalid-photo recovery, partial upstream failure, no-match widening, duplicate actions, unauthorized access, deletion, accessibility, reduced motion, and 320px overflow.
+Integration and E2E tests expect the local PostgreSQL and MinIO services above. Install the E2E browser once with `npx playwright install chromium`. The Playwright suite runs Chromium at desktop and mobile device sizes, uses generated/project-owned imagery only, and covers the complete decline-to-backup recovery journey, the direct acceptance path, invalid-photo recovery, partial upstream failure, no-match widening, duplicate actions, unauthorized access, deletion, accessibility, reduced motion, and 320px overflow.
 
 ## Privacy and security model
 
@@ -114,6 +119,8 @@ Integration and E2E tests expect the local PostgreSQL and MinIO services above. 
 - Production secrets must remain server-only. No variable in this project requires a `NEXT_PUBLIC_` prefix.
 
 ## Production deployment
+
+The judged deployment is [relay-youcam-marketplace.vercel.app](https://relay-youcam-marketplace.vercel.app). Deployment and live-provider checks are release operations; the local verification commands below do not mutate production.
 
 Provision PostgreSQL and a private S3-compatible bucket before deploying. Run migrations and the seed exactly once as release steps; do not run them during `next build`.
 
@@ -153,13 +160,15 @@ On PowerShell: `$env:PLAYWRIGHT_BASE_URL='https://your-relay-deployment.example'
 
 ## Current limitations
 
-Relay is a judgeable marketplace prototype, not a live rental operator. Demo identities are seeded, inventory is fictional, availability is local to one launch market, reservation/payment is simulated, and no performance, physical-fit, return-reduction, or environmental-impact guarantee is claimed. Production authentication, payments, payouts, logistics, damage protection, messaging, notifications, reviews, fraud controls, and multi-city liquidity are deferred.
+Relay is a judgeable marketplace prototype, not a live rental operator. Demo identities are seeded, inventory is fictional, availability is local to one launch market, and reservation/payment is simulated. The readiness score is a prioritization signal, not a guarantee or probability. Relay does not promise delivery, availability, physical fit, return reduction, or environmental impact. Production authentication, payments, payouts, logistics, damage protection, messaging, notifications, reviews, fraud controls, event-assurance fees, retailer-return routing, and multi-city liquidity are deferred.
 
 ## Submission materials
 
 - [`docs/submission/demo-script.md`](docs/submission/demo-script.md)
 - [`docs/submission/devpost-copy.md`](docs/submission/devpost-copy.md)
 - [`docs/submission/release-checklist.md`](docs/submission/release-checklist.md)
+- [`docs/submission/relay-rescue-shot-list.md`](docs/submission/relay-rescue-shot-list.md)
+- [`devpost-submission.md`](devpost-submission.md)
 
 ## License
 

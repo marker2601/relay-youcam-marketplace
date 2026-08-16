@@ -24,7 +24,7 @@ const offerTransitions: Record<OfferStatus, readonly OfferStatus[]> = {
   matched: ["generating", "expired"],
   generating: ["ready", "failed", "expired"],
   ready: ["reservation_requested", "expired"],
-  reservation_requested: ["accepted", "declined"],
+  reservation_requested: ["accepted", "declined", "expired"],
   accepted: [],
   declined: [],
   expired: [],

@@ -20,6 +20,7 @@ test("landmarks, labels, focus, live updates, and touch targets remain operable"
 
   const labels = [
     "Event date",
+    "Event time (Chicago)",
     "Minimum budget (USD)",
     "Maximum budget (USD)",
     "Size label",

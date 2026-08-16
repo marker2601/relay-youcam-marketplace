@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   check,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -65,6 +66,11 @@ export const offerStatusEnum = pgEnum("offer_status", [
   "accepted",
   "declined",
   "expired",
+]);
+export const assuranceRoleEnum = pgEnum("assurance_role", [
+  "primary",
+  "backup",
+  "alternative",
 ]);
 export const reservationStatusEnum = pgEnum("reservation_status", [
   "requested",
@@ -141,6 +147,7 @@ export const eventBriefs = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     eventType: eventTypeEnum("event_type").notNull(),
     eventDate: date("event_date", { mode: "string" }).notNull(),
+    eventStartsAt: timestamp("event_starts_at", { withTimezone: true }).notNull(),
     dressCode: dressCodeEnum("dress_code").notNull(),
     budgetMinCents: integer("budget_min_cents").notNull(),
     budgetMaxCents: integer("budget_max_cents").notNull(),
@@ -282,6 +289,7 @@ export const offers = pgTable(
       .unique()
       .references(() => matches.id, { onDelete: "cascade" }),
     status: offerStatusEnum("status").notNull().default("matched"),
+    assuranceRole: assuranceRoleEnum("assurance_role").notNull().default("alternative"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -311,6 +319,9 @@ export const reservations = pgTable(
     rentalPriceCents: integer("rental_price_cents").notNull(),
     depositDisplayCents: integer("deposit_display_cents").notNull(),
     status: reservationStatusEnum("status").notNull().default("requested"),
+    responseDueAt: timestamp("response_due_at", { withTimezone: true }).notNull(),
+    backupOfferId: uuid("backup_offer_id").references(() => offers.id, { onDelete: "restrict" }),
+    supersedesReservationId: uuid("supersedes_reservation_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -324,6 +335,11 @@ export const reservations = pgTable(
       .on(table.briefId)
       .where(sql`${table.status} <> 'cancelled'`),
     index("reservations_provider_status_idx").on(table.providerId, table.status),
+    foreignKey({
+      columns: [table.supersedesReservationId],
+      foreignColumns: [table.id],
+      name: "reservations_supersedes_reservation_id_reservations_id_fk",
+    }).onDelete("restrict"),
   ],
 );
 

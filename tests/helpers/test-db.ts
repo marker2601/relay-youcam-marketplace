@@ -25,7 +25,11 @@ function getTestDatabaseUrl(): string {
   return value;
 }
 
-export const testConnection = createDatabaseConnection(getTestDatabaseUrl(), { max: 1 });
+export function createTestDatabaseConnection(options: { max?: number } = {}) {
+  return createDatabaseConnection(getTestDatabaseUrl(), options);
+}
+
+export const testConnection = createTestDatabaseConnection({ max: 1 });
 export const testDb = testConnection.db;
 
 export async function migrateTestDatabase(): Promise<void> {

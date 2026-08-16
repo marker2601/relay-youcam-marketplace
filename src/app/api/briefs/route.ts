@@ -225,6 +225,7 @@ export function createBriefPostHandler(options: CreateBriefPostHandlerOptions) {
           shopperId: actor.userId,
           eventType: command.data.eventType,
           eventDate: command.data.eventDate,
+          eventStartsAt: new Date(command.data.eventStartsAt),
           dressCode: command.data.dressCode,
           budgetMinCents: command.data.budgetMinCents,
           budgetMaxCents: command.data.budgetMaxCents,

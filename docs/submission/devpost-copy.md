@@ -8,114 +8,101 @@ Relay
 
 ## Tagline
 
-A demand-first circular occasionwear marketplace where explainable matching and YouCam virtual try-on turn idle local garments into confident reservation offers.
+The reliability layer for time-sensitive fashion.
 
 ## One-line summary
 
-Relay lets a shopper post one event brief, receive up to three explainable circular-fashion matches, preview them through YouCam Clothes v3, and request a provider-approved reservation.
+Relay turns one urgent occasionwear brief into a primary look, an independent backup, YouCam previews, provider deadlines, and a one-tap recovery path to **Event ready**.
 
 ## Problem
 
-Occasionwear has a coordination problem. A shopper faces a date, dress code, budget, and fit uncertainty, while suitable garments sit idle across peer closets and small rental boutiques. Conventional resale and rental catalogs make the shopper repeat the search; fragmented local suppliers struggle to surface the right inventory at the right moment. A virtual try-on widget alone does not solve discovery, availability, or provider approval.
+Discovery products are optimized to show options, not to protect an outcome. A shopper with an approaching wedding, interview, or celebration can find a promising garment and still lose the plan when one owner is unavailable or slow to respond. Meanwhile, suitable garments remain fragmented across peer closets and small rental boutiques. A virtual try-on widget can reduce visual uncertainty, but it does not coordinate supply, deadlines, provider confirmation, or failure recovery.
 
 ## Solution and consumer/retail value
 
-Relay reverses the marketplace. The shopper posts the need once. Relay filters active inventory for availability, category, budget, radius, and measurement constraints; calculates a deterministic score; explains the strongest factors; and sends no more than three candidates through YouCam AI Clothes Virtual Try-On v3. The shopper compares the source garment and generated appearance before requesting a reservation. The owning provider reviews a qualified request without seeing the shopper's source image and accepts or declines it. Both sides then see the same reservation state and pickup/return window.
+**Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities; Relay makes sure you have something to wear.**
 
-For shoppers, Relay compresses a fragmented search into a short, relevant shortlist with transparent tradeoffs. For peer closet owners and boutiques, it converts idle inventory into high-intent local demand. The launch business hypothesis is an 18% commission on completed rentals; the prototype collects no payment.
+The shopper submits one time-sensitive brief with an explicit America/Chicago event time, constraints, measurements, preferences, and a consented photo. Relay hard-filters local inventory and ranks at most three matches. The top match becomes the primary; the strongest remaining match from a different provider becomes the backup when supply permits. Each candidate gets a YouCam Clothes v3 preview and an explainable Event Readiness Score covering availability, measurement compatibility, proximity, style, and provider confirmation.
+
+The shopper requests the primary while Relay preserves the backup. The owner receives a deadline based on event urgency. If the primary owner declines or the deadline expires, the shopper sees **Backup available** and can activate the already-rendered backup in one tap, without a new search or upload. If that independent provider accepts, the timeline reaches **Event ready**. This is an assurance workflow, not a delivery, fit, availability, or financial guarantee; the prototype collects no payment.
+
+For providers, Relay turns passive listings into qualified, time-bounded demand without exposing the shopper's source photo or measurement profile. The current business-model hypothesis is an 18% commission on completed rentals. A future product could test an event-assurance fee. Retailer-return and local-deadstock routing are future expansion ideas, not current features.
 
 ## How it was built
 
-Relay is a strict TypeScript/Next.js App Router application. PostgreSQL stores users, briefs, listings, matches, persisted try-on jobs, offers, reservations, and idempotency records. A private S3-compatible bucket stores source garments, consented shopper images, and copied results. Pure domain modules own hard filters, weighted ranking, explanations, and state transitions. Validated server routes enforce a signed demo session, ownership, idempotency, and privacy boundaries.
+Relay is a strict TypeScript/Next.js App Router application. PostgreSQL stores users, event briefs, listings, ranked matches, persisted try-on jobs, stable assurance roles, response deadlines, reservations, recovery links, and idempotency records. A private S3-compatible bucket stores consented shopper media, garment sources, and copied results. Validated server routes enforce signed demo sessions, role ownership, authorization, idempotency, and privacy boundaries.
 
 The real YouCam adapter:
 
-1. Registers the shopper and garment files with `POST /s2s/v2.0/file/cloth-v3`.
-2. Uploads bytes to the signed `PUT` instructions returned by YouCam.
-3. Creates a task with `POST /s2s/v2.0/task/cloth-v3`.
-4. Polls `GET /s2s/v2.0/task/cloth-v3/{task_id}` through a persisted, bounded retry state machine.
-5. Refreshes an expired result URL once and copies the successful result into private Relay storage.
+1. Registers shopper and garment files with `POST /s2s/v2.0/file/cloth-v3`.
+2. Uploads bytes using the signed method, URL, and headers returned by YouCam.
+3. Creates a Clothes v3 task with `POST /s2s/v2.0/task/cloth-v3`.
+4. Polls `GET /s2s/v2.0/task/cloth-v3/{task_id}` through a persisted bounded-retry state machine.
+5. Refreshes one expired result URL when necessary, then copies the result into private Relay storage.
 
-Independent jobs let two offers succeed even if a third image fails. HTTP/rate-limit/engine errors are normalized into safe user guidance without exposing credentials or upstream URLs.
+Server-side assurance rules classify urgency, assign stable roles, calculate bounded readiness components, set response deadlines, reconcile expiry, and authorize exactly one idempotent backup activation. The browser renders those server decisions; it never decides eligibility or receives YouCam, database, or storage credentials.
 
 ## Key features
 
-- One demand brief for both sides of the market.
-- At most three deterministic, explainable matches.
-- Real Clothes v3 integration behind a typed adapter plus a deterministic fake adapter for tests.
-- Side-by-side source garment and generated-result comparison.
-- Visible prices, measurements, distance, condition, provider type, and non-fit disclaimer.
-- Private provider review with owner-only accept/decline.
-- Idempotent reservation handshake and shared confirmed timeline.
-- Invalid-photo recovery, no-match widening, partial failure, rate-limit retry, and expired-result handling.
-- Short-lived authorized media URLs and owner-triggered source/result deletion.
-- Responsive, keyboard-operable interface tested at desktop, mobile, and 320px.
+- Explicit event deadline with Tonight, Tomorrow, This week, or Planned urgency.
+- Up to three deterministic and explainable matches.
+- Primary and independent-provider backup assignment when eligible supply exists.
+- Consented YouCam Clothes v3 previews with isolated per-offer failures.
+- Component-level Event Readiness Scores that do not claim a probability or guarantee.
+- Provider response windows of 15 minutes, 60 minutes, or 4 hours depending on urgency.
+- Decline and timeout recovery through an authorized, idempotent **Activate backup look** action.
+- Backup-provider acceptance ending in **Event ready** with a no-payment disclosure.
+- Private media, short-lived authorized Relay URLs, and owner-triggered deletion.
+- Responsive and keyboard-operable desktop/mobile flows covered by deterministic browser tests.
 
 ## Why the idea is additive
 
-Relay does not wrap an API call around a product page. It uses YouCam as the trust layer inside a new marketplace mechanism: demand arrives first, fragmented one-of-one supply is ranked for that demand, and the supplier still controls fulfillment. This creates a compounding product loop among matching quality, try-on confidence, local inventory utilization, provider acceptance, and repeat briefs.
+Relay does not add a try-on button to another catalog. It uses YouCam as visual confidence inside a new coordination mechanism: event demand arrives first, distributed one-of-one inventory is ranked into a resilient plan, two independent suppliers reduce correlated failure, and a preserved preview makes recovery immediate. The product is valuable precisely when the first choice fails.
 
-The concept is also extensible beyond fashion retail catalogs: theatre and film costume libraries, hotel/venue guest services, university formalwear closets, stylist inventory networks, and brand take-back programs all contain distributed garments that can be activated by an event-specific demand brief.
+Relay already routes demand across peer closets and boutique inventory. The same mechanism could later serve stylist networks, university formalwear closets, hotel or venue guest services, and retailer returns or local deadstock. Those additional channels are market-expansion hypotheses, not integrations in this prototype.
 
-## Potential impact
+## Potential impact and business model
 
-Relay targets a real, bounded audience first: adults seeking wedding-guest and comparable special-event outfits in one dense US metro. Its measurable hypotheses are increased utilization of existing inventory, reduced shopper search time, new provider earnings, and higher request-to-accept conversion when a preview is available. Return reduction, physical fit, and environmental benefit remain future measurements, not current claims.
+Relay begins with adults seeking occasionwear in one dense US metro and providers with underused local inventory. The measurable hypotheses are shorter search time, higher request-to-accept conversion, more completed rentals, and more provider earnings. The launch monetization hypothesis is an 18% commission on completed rentals. An optional event-assurance fee would be tested only after payment, policy, and operational guarantees exist. Relay makes no current claim about fit, delivery, lower returns, or environmental impact.
 
 ## Challenges and workarounds
 
-The hardest technical boundary was making an asynchronous image API behave like a reliable marketplace capability without introducing a queue for a short hackathon. Relay persists each job, advances at most three due jobs per request, uses compare-and-set state transitions and bounded jittered backoff, and never recreates a task after YouCam has returned an external task ID.
+The first technical wall was making an asynchronous image API behave like a reliable marketplace capability. Relay persists each YouCam job, advances only due work, isolates failures by offer, uses compare-and-set transitions and bounded jittered retries, and does not recreate a task after YouCam has returned an external task ID.
 
-A second challenge was privacy across two marketplace roles. Relay stores media separately from briefs/listings, authorizes every read, gives providers no route to shopper media, revokes database access before deleting objects, and keeps deletion retryable if storage cleanup fails.
+The second wall was safe recovery under concurrency. A provider response can race a deadline, a shopper can double-click activation, and multiple browser sessions can act at once. Relay uses server timestamps, database transactions, conditional updates, idempotency records, and bounded retries so one outcome wins and duplicate recovery returns the existing reservation.
+
+The third wall was privacy across marketplace roles. Providers receive event and garment context but no shopper source media or measurements. Relay authorizes every media read, keeps upstream signed URLs server-only, and revokes application access before best-effort object cleanup.
 
 ## What surprised us about the API
 
-YouCam's file-registration response returns the upload method, signed URL, and required headers instead of requiring image bytes in the authenticated JSON request. That separation was a useful surprise: it made direct object upload explicit and encouraged a clean server-side adapter. The time-limited result URL also forced Relay to treat copied private storage, refresh, and deletion as first-class product concerns rather than demo cleanup.
+YouCam file registration returns explicit signed upload instructions instead of accepting the image bytes in the authenticated JSON call. That separation encouraged a clean server-side adapter and made credential boundaries clear. The time-limited result URL also made private copying, refresh behavior, and deletion part of the product architecture rather than demo cleanup.
 
 ## Accomplishments and lessons
 
-Relay proves an end-to-end two-sided transaction instead of stopping at generated imagery. The automated suite covers the entire shopper/provider handshake, state-machine invariants, authorization, privacy deletion, partial failures, duplicate commands, accessibility, and responsive behavior. The central lesson is that useful VTO products need surrounding trust infrastructure: selection logic, explanations, availability, ownership, failure isolation, retention messaging, and an honest fit boundary.
+Relay proves a two-sided failure-and-recovery transaction instead of stopping at generated imagery. A deterministic browser journey creates the urgent brief, verifies different primary and backup providers, requests the primary, records a decline, activates the preserved backup, accepts as the second provider, and reaches **Event ready**. The lesson is that virtual try-on becomes harder to ignore when it is paired with availability, deadlines, explanations, ownership, and recovery.
 
 ## Next steps
 
-- Replace the signed demo identity with production authentication and provider onboarding.
+- Replace seeded demo identity with production authentication and provider onboarding.
 - Add payments, payouts, cancellation/refund policy, damage protection, and pickup logistics.
-- Move persisted polling behind a durable queue/webhook boundary.
-- Validate match weights and commission with one-city supply/demand pilots.
-- Measure preview-to-request lift, provider acceptance, completed rentals, repeat usage, and stated displacement of a new purchase.
+- Move persisted polling behind a durable queue or webhook boundary.
+- Pilot one-city supply and demand to validate match weights and the 18% commission.
+- Measure primary failure rate, backup activation, provider response time, request-to-accept conversion, completed rentals, and repeat briefs.
+- Explore an event-assurance fee and retailer-return routing only after the core marketplace is validated.
 
 ## Explicitly deferred
 
-Payments, deposits, payouts, shipping, courier routing, identity verification, damage claims, insurance, messaging, notifications, reviews, fraud scoring, dynamic pricing, and multi-city liquidity are not implemented. Seeded inventory is fictional. No guaranteed fit, return reduction, environmental reduction, or live marketplace supply is claimed.
+Payments, deposits, payouts, shipping, delivery, identity verification, damage claims, insurance, messaging, notifications, reviews, fraud scoring, dynamic pricing, event-assurance charges, retailer-return feeds, and multi-city liquidity are not implemented. Seeded inventory is fictional. No legal, financial, delivery, availability, physical-fit, return-reduction, or environmental guarantee is claimed.
 
-## Repository and testing
+## Links and official fields
 
 - Repository: https://github.com/marker2601/relay-youcam-marketplace
-- Public demo: **TODO after production data/storage and live YouCam variables are configured**
-- Demo video: **TODO public YouTube/Vimeo/Youku URL**
-- Setup: follow `README.md`, then run `npm run typecheck`, `npm run lint`, `npm run test:unit`, `npm run test:integration`, `npm run build`, and `npm run test:e2e`.
+- Public demo: https://relay-youcam-marketplace.vercel.app
+- Demo video: **TODO — add the public 1–3 minute YouTube/Vimeo/Youku URL after recording**
+- Project start date: August 14, 2026 (first repository commit).
+- App status: existing Relay prototype with a major Relay Rescue update begun August 16, 2026.
+- Submitter type: **TODO — user-only Devpost answer**
+- Country of residence: **TODO — user-only Devpost answer**
+- Required screenshots and thumbnail: **TODO — capture the verified production recovery story**
 
-## Screenshot shot list
-
-1. Desktop shortlist with three resolved offers, prices, scores, and explanations.
-2. Mobile source-versus-real-result comparison with the fit disclaimer.
-3. Provider request showing decision context without the shopper photo.
-4. Confirmed shopper timeline with pickup, event, and return states.
-5. Privacy deletion control and exact retention copy.
-
-## Official form fields (fetched August 15, 2026)
-
-- Submitter type: **TODO — Individual / Team of individuals / Organization**
-- Country of residence: **TODO**
-- App status: **New**
-- Project start date: **08-14-26**
-- Existing-project update: **Not applicable**
-- Required description: use **Solution and consumer/retail value** plus **How it was built** above.
-- Repository URL: https://github.com/marker2601/relay-youcam-marketplace
-- API surprise: use **What surprised us about the API** above; update after the real smoke test if the observed behavior differs.
-- Under-discussed industry/use case: use **Why the idea is additive** above.
-- Technical wall/workaround: use **Challenges and workarounds** above.
-- Social post URL: **Optional TODO**
-- Required screenshots: **TODO capture after real result**
-- Required public 1–3 minute video: **TODO**
-
-Official deadline: August 17, 2026 at 11:45 AM Eastern Time. The account is registered for the event. Participation in an exit interview and inclusion in a blog article are required if selected as a winner.
+Official deadline: August 17, 2026 at 15:45 UTC.

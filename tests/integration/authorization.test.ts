@@ -7,12 +7,14 @@ import {
   matches,
   mediaObjects,
   offers,
+  reservations,
   users,
 } from "@/lib/db/schema";
 import type { Actor } from "@/lib/auth/demo-session";
 import type { TenthsCm } from "@/lib/domain/contracts";
 import { BriefRepository, NotFoundError } from "@/lib/repositories/briefs";
 import { ListingRepository } from "@/lib/repositories/listings";
+import { ReservationRepository } from "@/lib/repositories/reservations";
 import { createDemoSessionPostHandler } from "@/app/api/demo/session/route";
 import { seedIds, seedRelay } from "../../scripts/seed";
 import {
@@ -28,6 +30,9 @@ const shopperBMediaId = "60000000-0000-4000-8000-000000000002";
 const shopperBBriefId = "60000000-0000-4000-8000-000000000003";
 const priyaMatchId = "60000000-0000-4000-8000-000000000004";
 const priyaOfferId = "60000000-0000-4000-8000-000000000005";
+const priyaReservationId = "60000000-0000-4000-8000-000000000006";
+const backupMatchId = "60000000-0000-4000-8000-000000000007";
+const backupOfferId = "60000000-0000-4000-8000-000000000008";
 
 const shopperA: Actor = { userId: seedIds.shopper, role: "shopper" };
 const shopperB: Actor = { userId: shopperBId, role: "shopper" };
@@ -58,6 +63,7 @@ beforeEach(async () => {
     shopperId: shopperBId,
     eventType: "wedding_guest",
     eventDate: "2026-09-20",
+    eventStartsAt: new Date("2026-09-21T00:00:00.000Z"),
     dressCode: "formal",
     budgetMinCents: 5_000,
     budgetMaxCents: 12_000,
@@ -93,6 +99,7 @@ beforeEach(async () => {
     id: priyaOfferId,
     matchId: priyaMatchId,
     status: "reservation_requested",
+    assuranceRole: "primary",
     expiresAt: new Date("2026-09-19T12:00:00.000Z"),
   });
 });
@@ -213,5 +220,118 @@ describe("authorized repositories", () => {
     expect(serialized).not.toContain("shopperMediaId");
     expect(serialized).not.toContain("measurementProfile");
     await expect(repository.listRequests(providerA)).resolves.toEqual([]);
+  });
+
+  it("returns recovery fields to the shopper while redacting backup ownership from providers", async () => {
+    await testDb.insert(matches).values({
+      id: backupMatchId,
+      briefId: shopperBBriefId,
+      listingId: seedIds.emeraldListing,
+      briefRevision: 1,
+      listingVersion: 1,
+      scoreBasisPoints: 7_900,
+      scoreBreakdown: { measurement: 2_900 },
+      explanation: ["Independent backup provider"],
+    });
+    await testDb.insert(offers).values({
+      id: backupOfferId,
+      matchId: backupMatchId,
+      status: "ready",
+      assuranceRole: "backup",
+      expiresAt: new Date("2026-09-19T12:00:00.000Z"),
+    });
+    await testDb.update(offers).set({ status: "declined" }).where(eq(offers.id, priyaOfferId));
+    await testDb.insert(reservations).values({
+      id: priyaReservationId,
+      offerId: priyaOfferId,
+      briefId: shopperBBriefId,
+      shopperId: shopperBId,
+      providerId: seedIds.peerPriya,
+      eventDate: new Date("2026-09-20T17:00:00.000Z"),
+      pickupDate: new Date("2026-09-19T17:00:00.000Z"),
+      returnDate: new Date("2026-09-21T17:00:00.000Z"),
+      rentalPriceCents: 7_200,
+      depositDisplayCents: 3_000,
+      status: "cancelled",
+      responseDueAt: new Date("2026-08-15T13:00:00.000Z"),
+      backupOfferId,
+      createdAt: new Date("2026-08-15T12:00:00.000Z"),
+    });
+    const repository = new ReservationRepository(testDb);
+    const readAt = new Date("2026-08-15T14:00:00.000Z");
+
+    const shopperDetail = await repository.getDetail(shopperB, priyaReservationId, readAt);
+    expect(shopperDetail).toMatchObject({
+      offerStatus: "declined",
+      assuranceRole: "primary",
+      eventStartsAt: "2026-09-21T00:00:00.000Z",
+      urgency: "planned",
+      responseDueAt: "2026-08-15T13:00:00.000Z",
+      backup: {
+        offerId: backupOfferId,
+        title: "Emerald Satin Midi",
+        providerDisplayName: "West Loop Wardrobe",
+      },
+      canActivateBackup: true,
+      supersedesReservationId: null,
+    });
+    expect(JSON.stringify(shopperDetail)).not.toMatch(
+      /shopperMediaId|sourceMedia|sourceUrl|objectKey|measurementProfile|bustTenthsCm/i,
+    );
+
+    const providerDetail = await repository.getDetail(providerB, priyaReservationId, readAt);
+    expect(providerDetail).toMatchObject({
+      offerStatus: "declined",
+      assuranceRole: "primary",
+      backup: null,
+      canActivateBackup: false,
+    });
+    expect(JSON.stringify(providerDetail)).not.toContain(backupOfferId);
+    expect(JSON.stringify(providerDetail)).not.toContain("West Loop Wardrobe");
+    await expect(repository.getDetail(providerA, priyaReservationId, readAt)).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+
+    const providerRequests = await repository.listProviderRequests(providerB, readAt);
+    expect(providerRequests[0]).toMatchObject({
+      offerStatus: "declined",
+      assuranceRole: "primary",
+      eventStartsAt: "2026-09-21T00:00:00.000Z",
+      urgency: "planned",
+      responseDueAt: "2026-08-15T13:00:00.000Z",
+      hasBackup: true,
+    });
+    expect(JSON.stringify(providerRequests)).not.toMatch(
+      /shopperMediaId|sourceMedia|sourceUrl|objectKey|measurementProfile|bustTenthsCm|West Loop Wardrobe/i,
+    );
+  });
+
+  it("hides another shopper's reservation during backup activation", async () => {
+    await testDb.update(offers).set({ status: "declined" }).where(eq(offers.id, priyaOfferId));
+    await testDb.insert(reservations).values({
+      id: priyaReservationId,
+      offerId: priyaOfferId,
+      briefId: shopperBBriefId,
+      shopperId: shopperBId,
+      providerId: seedIds.peerPriya,
+      eventDate: new Date("2026-09-20T17:00:00.000Z"),
+      pickupDate: new Date("2026-09-19T17:00:00.000Z"),
+      returnDate: new Date("2026-09-21T17:00:00.000Z"),
+      rentalPriceCents: 7_200,
+      depositDisplayCents: 3_000,
+      status: "cancelled",
+      responseDueAt: new Date("2026-08-15T13:00:00.000Z"),
+      createdAt: new Date("2026-08-15T12:00:00.000Z"),
+    });
+
+    await expect(
+      new ReservationRepository(testDb).activateBackup(
+        shopperA,
+        priyaReservationId,
+        "activate-foreign-001",
+        new Date("2026-08-15T14:00:00.000Z"),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(await testDb.select().from(reservations)).toHaveLength(1);
   });
 });

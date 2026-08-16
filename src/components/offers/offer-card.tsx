@@ -1,10 +1,32 @@
 import Image from "next/image";
 
+import { DeadlineCountdown } from "@/components/assurance/deadline-countdown";
 import { ReserveOfferButton } from "@/components/reservation/reserve-offer-button";
-import type { OfferSnapshotItem } from "@/lib/repositories/offer-read";
+import type { OfferSnapshot, OfferSnapshotItem } from "@/lib/repositories/offer-read";
 
 const fitDisclaimer =
   "Preview shows appearance and styling, not guaranteed physical fit. Check the garment measurements before reserving.";
+
+const readinessComponents = [
+  { key: "availability", label: "Availability", maximum: 35 },
+  { key: "measurements", label: "Measurements", maximum: 25 },
+  { key: "proximity", label: "Proximity", maximum: 20 },
+  { key: "style", label: "Style", maximum: 10 },
+  { key: "confirmation", label: "Confirmation", maximum: 10 },
+] as const;
+
+const assuranceRoleLabels = {
+  primary: "Primary look",
+  backup: "Backup look",
+  alternative: "Another option",
+} as const;
+
+const urgencyLabels: Record<OfferSnapshot["urgency"], string> = {
+  tonight: "Tonight",
+  tomorrow: "Tomorrow",
+  this_week: "This week",
+  planned: "Planned",
+};
 
 function money(cents: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -24,15 +46,24 @@ function label(value: string): string {
 
 interface OfferCardProps {
   offer: OfferSnapshotItem;
+  eventStartsAt: string;
+  urgency: OfferSnapshot["urgency"];
+  canRequest: boolean;
   onImageExpired: () => void;
 }
 
-export function OfferCard({ offer, onImageExpired }: OfferCardProps) {
-  const ready = offer.status === "ready" && offer.resultImageUrl;
+export function OfferCard({ offer, eventStartsAt, urgency, canRequest, onImageExpired }: OfferCardProps) {
+  const ready = offer.status === "ready" && Boolean(offer.resultImageUrl);
   const failed = offer.status === "failed";
+  const isAssuredLook = offer.assuranceRole !== "alternative";
 
   return (
-    <article className={`offer-card offer-card--${offer.status}`}>
+    <article
+      className={`offer-card offer-card--${offer.status} offer-card--role-${offer.assuranceRole}`}
+      data-assurance-role={offer.assuranceRole}
+      data-provider-id={offer.provider.id}
+      data-offer-status={offer.status}
+    >
       <div className="offer-image-stage">
         {ready ? (
           <Image
@@ -72,6 +103,19 @@ export function OfferCard({ offer, onImageExpired }: OfferCardProps) {
       </div>
 
       <div className="offer-card__body">
+        <p className={`assurance-role assurance-role--${offer.assuranceRole}`}>
+          {assuranceRoleLabels[offer.assuranceRole]}
+        </p>
+        {isAssuredLook && (
+          <div className="offer-timing">
+            <span className="urgency-label">{urgencyLabels[urgency]}</span>
+            <DeadlineCountdown
+              target={eventStartsAt}
+              completeLabel="Event has started"
+              prefix="Event starts in"
+            />
+          </div>
+        )}
         <div className="offer-card__heading">
           <div>
             <p className="offer-provider">
@@ -100,6 +144,42 @@ export function OfferCard({ offer, onImageExpired }: OfferCardProps) {
           </>
         )}
 
+        {isAssuredLook && (
+          <section
+            className="readiness-score"
+            aria-label={`Event readiness ${offer.readiness.total} out of 100 for ${offer.title}`}
+          >
+            <div className="readiness-score__heading">
+              <h3>Event readiness</h3>
+              <strong>{offer.readiness.total}/100</strong>
+            </div>
+            <meter
+              className="readiness-meter"
+              aria-label={`Event readiness score ${offer.readiness.total} out of 100`}
+              min="0"
+              max="100"
+              value={offer.readiness.total}
+            >
+              {offer.readiness.total} out of 100
+            </meter>
+            <p>A prioritization signal, not a guarantee.</p>
+            <dl className="readiness-components">
+              {readinessComponents.map(({ key, label: componentLabel, maximum }) => {
+                const points = offer.readiness[key];
+                return (
+                  <div key={key}>
+                    <dt>{componentLabel}</dt>
+                    <dd>
+                      {points}/{maximum}
+                      {key === "confirmation" && points === 0 ? " · Pending" : ""}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+          </section>
+        )}
+
         <dl className="offer-facts">
           <div><dt>Size</dt><dd>{offer.sizeLabel}</dd></div>
           <div><dt>Condition</dt><dd>{label(offer.condition)}</dd></div>
@@ -123,11 +203,19 @@ export function OfferCard({ offer, onImageExpired }: OfferCardProps) {
         </details>
 
         <p className="fit-disclaimer">{fitDisclaimer}</p>
-        {ready ? (
+        {ready && canRequest ? (
           <ReserveOfferButton offerId={offer.id} garmentTitle={offer.title} />
         ) : (
           <p className="offer-action-note">
-            {failed ? "Review the garment details while the preview is unavailable." : "This card will update automatically."}
+            {failed
+              ? "Review the garment details while the preview is unavailable."
+              : ready && offer.assuranceRole === "backup"
+                ? "Kept ready for one-tap recovery if the primary fails."
+                : ready && offer.assuranceRole === "alternative"
+                  ? "Available to review; Relay requests the primary first."
+                  : ready
+                    ? "Relay is finishing your independent backup before requests open."
+                    : "This card will update automatically."}
           </p>
         )}
       </div>

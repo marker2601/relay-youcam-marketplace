@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { OfferCard } from "@/components/offers/offer-card";
+import { assignAssuranceRoles } from "@/lib/domain/assurance";
 import type { OfferSnapshot } from "@/lib/repositories/offer-read";
 
 export interface BriefRefinement {
@@ -13,6 +15,50 @@ export interface BriefRefinement {
 }
 
 export type RefineBriefCommand = BriefRefinement;
+
+const assuranceRoleOrder = {
+  primary: 0,
+  backup: 1,
+  alternative: 2,
+} as const;
+
+function normalizePresentationRoles(
+  offers: OfferSnapshot["offers"],
+  reservationId: OfferSnapshot["reservationId"],
+): OfferSnapshot["offers"] {
+  if (reservationId !== null) return offers;
+  const activeOffers = offers.filter(
+    (offer) => offer.status !== "failed" && offer.status !== "expired",
+  );
+  const activePrimary = activeOffers.filter((offer) => offer.assuranceRole === "primary");
+  const activeBackup = activeOffers.filter((offer) => offer.assuranceRole === "backup");
+  const primaryProviderId = activePrimary[0]?.provider.id;
+  const independentCandidateExists =
+    primaryProviderId !== undefined &&
+    activeOffers.some(
+      (offer) => offer.id !== activePrimary[0]?.id && offer.provider.id !== primaryProviderId,
+    );
+  const persistedRolesAreCoherent =
+    activePrimary.length === 1 &&
+    (independentCandidateExists
+      ? activeBackup.length === 1 && activeBackup[0]!.provider.id !== primaryProviderId
+      : activeBackup.length === 0);
+  const roles = persistedRolesAreCoherent
+    ? new Map(activeOffers.map((offer) => [offer.id, offer.assuranceRole]))
+    : assignAssuranceRoles(
+        [...activeOffers]
+          .sort(
+            (left, right) =>
+              right.scoreBasisPoints - left.scoreBasisPoints ||
+              left.listingId.localeCompare(right.listingId),
+          )
+          .map((offer) => ({ id: offer.id, providerId: offer.provider.id })),
+      );
+  return offers.map((offer) => {
+    const assuranceRole = roles.get(offer.id) ?? "alternative";
+    return assuranceRole === offer.assuranceRole ? offer : { ...offer, assuranceRole };
+  });
+}
 
 function announcement(snapshot: OfferSnapshot): string {
   if (snapshot.briefStatus === "no_matches" || snapshot.offers.length === 0) {
@@ -47,6 +93,23 @@ export function OfferGrid({ snapshot, refinement, onRefine, onImageExpired }: Of
   const [refining, setRefining] = useState(false);
   const [refineError, setRefineError] = useState<string | null>(null);
   const noMatches = snapshot.briefStatus === "no_matches" || snapshot.offers.length === 0;
+  const presentationOffers = normalizePresentationRoles(snapshot.offers, snapshot.reservationId);
+  const orderedOffers = [...presentationOffers].sort(
+    (left, right) =>
+      assuranceRoleOrder[left.assuranceRole] - assuranceRoleOrder[right.assuranceRole],
+  );
+  const primary = orderedOffers.find((offer) => offer.assuranceRole === "primary");
+  const backup = orderedOffers.find((offer) => offer.assuranceRole === "backup");
+  const usesIndependentProviders =
+    primary !== undefined && backup !== undefined && primary.provider.id !== backup.provider.id;
+  const backupReady =
+    backup !== undefined && backup.status === "ready" && Boolean(backup.resultImageUrl);
+  const primaryCanRequest =
+    primary !== undefined &&
+    snapshot.reservationId === null &&
+    primary.status === "ready" &&
+    Boolean(primary.resultImageUrl) &&
+    (backup === undefined || backupReady);
 
   async function submitRefinement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -115,11 +178,43 @@ export function OfferGrid({ snapshot, refinement, onRefine, onImageExpired }: Of
           )}
         </section>
       ) : (
-        <div className="offer-grid">
-          {snapshot.offers.map((offer) => (
-            <OfferCard key={offer.id} offer={offer} onImageExpired={onImageExpired} />
-          ))}
-        </div>
+        <section className="assurance-plan" aria-labelledby="assurance-plan-title">
+          <div className="assurance-plan__summary">
+            <div>
+              <p className="eyebrow">Primary and backup plan</p>
+              <h2 id="assurance-plan-title">Your event assurance plan</h2>
+            </div>
+            <p className="assurance-plan__resilience">
+              <strong>Plan coverage</strong>
+              <span>
+                {primary === undefined || backup === undefined
+                  ? "Primary only—widen budget, radius, or category to add protection"
+                  : usesIndependentProviders
+                    ? "Independent providers reduce the chance that one cancellation leaves you without a plan"
+                    : "Primary and backup currently come from the same provider"}
+              </span>
+            </p>
+          </div>
+          {snapshot.reservationId ? (
+            <p className="offer-action-note">
+              This shortlist is already connected to a reservation. Use its status page for
+              confirmation or backup recovery.{" "}
+              <Link href={`/reservations/${snapshot.reservationId}`}>View reservation</Link>
+            </p>
+          ) : null}
+          <div className="offer-grid">
+            {orderedOffers.map((offer) => (
+              <OfferCard
+                key={offer.id}
+                offer={offer}
+                eventStartsAt={snapshot.eventStartsAt}
+                urgency={snapshot.urgency}
+                canRequest={offer.id === primary?.id && primaryCanRequest}
+                onImageExpired={onImageExpired}
+              />
+            ))}
+          </div>
+        </section>
       )}
     </>
   );

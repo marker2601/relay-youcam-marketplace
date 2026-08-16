@@ -1,4 +1,17 @@
 /** Measurements cross domain boundaries as integer tenths of one centimeter. */
+import type {
+  AssuranceRole,
+  EventUrgency,
+  ReadinessBreakdown,
+} from "./assurance";
+
+export type {
+  AssuranceCoverage,
+  AssuranceRole,
+  EventUrgency,
+  ReadinessBreakdown,
+} from "./assurance";
+
 export type TenthsCm = number & { readonly __unit: "tenths_cm" };
 export type MoneyCents = number;
 
@@ -68,36 +81,11 @@ export interface OfferCard {
   originalImageUrl: string;
   resultImageUrl: string | null;
   expiresAt: string;
-}
-
-export interface ProviderRequest {
-  id: string;
-  reservationId: string | null;
-  status: OfferStatus;
-  eventType: EventType;
-  eventDate: string;
-  dressCode: DressCode;
-  sizeLabel: string;
-  listingId: string;
-  listingTitle: string;
-  rentalPriceCents: MoneyCents;
-  pickupDate: string;
-  returnDate: string;
-}
-
-export interface ReservationDetail {
-  id: string;
-  offerId: string;
-  status: ReservationStatus;
-  garmentTitle: string;
-  providerDisplayName: string;
-  providerType: ProviderType;
-  eventDate: string;
-  pickupDate: string;
-  returnDate: string;
-  rentalPriceCents: MoneyCents;
-  depositDisplayCents: MoneyCents;
-  simulation: true;
+  assuranceRole: AssuranceRole;
+  eventStartsAt: string;
+  urgency: EventUrgency;
+  readiness: ReadinessBreakdown;
+  responseDueAt: string | null;
 }
 
 export interface BriefDetail {
