@@ -5,8 +5,8 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 ## Fresh local verification
 
 - [x] Strict TypeScript: `npm.cmd run typecheck` exited 0.
-- [x] ESLint: `npm.cmd run lint` exited 0 with zero errors and four existing unused-variable warnings.
-- [x] Full Vitest suite: 28 files and 237 tests passed.
+- [x] ESLint: `npm.cmd run lint` exited 0 with zero errors and three known negative-fixture unused-variable warnings.
+- [x] Full Vitest suite: 28 files and 259 tests passed.
 - [x] Next.js 16.3.1 production build compiled and generated all routes successfully.
 - [x] Full Playwright suite: 16/16 desktop/mobile/accessibility scenarios passed, including decline-to-backup recovery.
 - [x] Exact tracked-artifact and secret-pattern checks were inspected: only the intentionally tracked `.env.example` matched the artifact expression; assignment matches were safe placeholders or command documentation, with no production values.
@@ -34,21 +34,21 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 - [x] Production PostgreSQL and private object storage were configured before this documentation task.
 - [x] RLS was enabled with no public policies before this documentation task.
 - [x] A real YouCam Clothes v3 success path was completed within the approved credit budget before this documentation task.
-- [ ] Push the final reviewed commit and deploy it through the existing Vercel project.
-- [ ] Run the production smoke suite against the exact deployed commit.
-- [ ] Re-run one real YouCam success path on that deployed commit within the approved credit budget.
-- [ ] Verify anonymous access to a known production object returns `403`/`AccessDenied`.
-- [ ] Verify the full primary-decline-backup-acceptance path produces no browser/runtime errors in production.
+- [x] Push the final reviewed commit and deploy it through the existing Vercel project.
+- [x] Run the production smoke suite against the exact deployed commit.
+- [x] Re-run one real YouCam success path on that deployed commit within the approved credit budget.
+- [x] Verify anonymous access to a known production object returns `403`/`AccessDenied`.
+- [x] Verify the full primary-decline-backup-acceptance path produces no browser/runtime errors in production.
 
 ## Required visual assets
 
-- [ ] Hero screenshot visibly includes both exact sentences: **Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities; Relay makes sure you have something to wear.**
-- [ ] Primary and independent backup YouCam previews with readiness components.
-- [ ] Primary decline followed by visible **Backup available**.
-- [ ] Backup provider acceptance followed by **Event ready**.
-- [ ] Submission thumbnail derived from project-owned assets.
-- [ ] Public 1–3 minute 1080p YouTube/Vimeo/Youku demo showing and explaining YouCam.
-- [ ] Signed-out playback verifies the final video URL is public.
+- [x] Hero screenshot visibly includes both exact sentences: **Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities; Relay makes sure you have something to wear.**
+- [x] Primary and independent backup real YouCam previews.
+- [x] Primary decline followed by visible **Backup available**.
+- [x] Backup provider acceptance followed by **Event ready**.
+- [x] Submission thumbnail derived from project-owned assets.
+- [x] Public 2:25 1080p YouTube demo showing and explaining YouCam: https://youtu.be/rtxc3_vG1a8.
+- [x] Unauthenticated fetch verifies the final video URL is public.
 
 Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 
@@ -61,9 +61,9 @@ Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 - [x] App status is documented as an existing Relay prototype with a major Rescue update begun August 16, 2026.
 - [ ] User supplies submitter type.
 - [ ] User supplies country of residence.
-- [ ] Add final screenshots, thumbnail, and public video URL.
-- [ ] Confirm repository visibility or judge access.
-- [ ] Confirm the exact submitted copy contains no guarantees or unimplemented retailer-return claim.
+- [x] Add final screenshots, thumbnail, and public video URL.
+- [x] Confirm repository visibility or judge access.
+- [x] Confirm the exact submitted copy contains no guarantees or unimplemented retailer-return claim.
 - [ ] Obtain the user's final explicit `yes, submit` immediately before the irreversible submit action.
 - [ ] Submit before August 17, 2026 at 15:45 UTC.
 
@@ -71,10 +71,10 @@ Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 
 | Criterion | Evidence | Status before final production pass |
 | --- | --- | --- |
-| Technological implementation | Typed Clothes v3 adapter; persisted jobs and private copy; stable assurance roles; bounded readiness; transactional expiry and idempotent failover; deterministic recovery E2E. | Local suite passed; final production rerun pending |
-| Coherent design | One visible promise connects the brief, primary/backup plan, provider deadline, recovery, and **Event ready** outcome. | Implemented; screenshots pending |
+| Technological implementation | Typed Clothes v3 adapter; persisted jobs and private copy; stable assurance roles; bounded readiness; transactional expiry and idempotent failover; deterministic recovery E2E. | Local, CI, production smoke, and real YouCam path passed |
+| Coherent design | One visible promise connects the brief, primary/backup plan, provider deadline, recovery, and **Event ready** outcome. | Implemented and uploaded with four production screenshots |
 | Potential impact | Bounded occasionwear wedge, independent-provider resilience, 18% commission hypothesis, measurable conversion and completion outcomes. | Copy ready; market validation remains a hypothesis |
-| Quality/non-obviousness | YouCam is the visual trust layer inside a demand-first, failure-tolerant two-sided marketplace rather than a catalog widget. | Implemented; video proof pending |
+| Quality/non-obviousness | YouCam is the visual trust layer inside a demand-first, failure-tolerant two-sided marketplace rather than a catalog widget. | Implemented; public 2:25 video proof live |
 
 ## Exact local release commands
 

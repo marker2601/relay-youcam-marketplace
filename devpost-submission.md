@@ -1,6 +1,6 @@
 # Relay Devpost submission worksheet
 
-Nothing in this worksheet has been submitted to Devpost.
+The project and submission draft are live at https://devpost.com/software/relay-xr7byl. The final irreversible submission has not been made.
 
 ## Core project fields
 
@@ -12,8 +12,8 @@ Nothing in this worksheet has been submitted to Devpost.
 - **App status:** Existing Relay prototype with a major Relay Rescue update begun August 16, 2026. Repository history contains the initial working marketplace before the Rescue assurance update.
 - **Submitter type:** **TODO — user-only answer**
 - **Country of residence:** **TODO — user-only answer**
-- **Public 1–3 minute video:** **TODO — record, publish, and add the final YouTube/Vimeo/Youku URL**
-- **Screenshots and thumbnail:** **TODO — capture and upload the final production assets in `docs/submission/relay-rescue-shot-list.md`**
+- **Public 1–3 minute video:** https://youtu.be/rtxc3_vG1a8 (2:25, 1080p, public, copyright check passed).
+- **Screenshots and thumbnail:** uploaded to the Devpost draft; project-owned source assets are in `docs/submission/assets/`.
 
 ## Product description
 
@@ -56,9 +56,9 @@ The hardest wall was safe recovery across asynchronous image work and concurrent
 
 ## Submission safety gate
 
-- [ ] Paste the final public video URL and verify it signed out.
-- [ ] Upload the final screenshot set and thumbnail.
+- [x] Paste the final public video URL and verify its unauthenticated public page.
+- [x] Upload the final screenshot set and thumbnail.
 - [ ] Supply submitter type and country of residence.
-- [ ] Confirm repository visibility or judge access.
-- [ ] Confirm the deployed commit passes production smoke and one real YouCam path.
+- [x] Confirm repository visibility or judge access.
+- [x] Confirm the deployed commit passes production smoke and one real YouCam path.
 - [ ] Obtain the user's final explicit `yes, submit` immediately before submission.
