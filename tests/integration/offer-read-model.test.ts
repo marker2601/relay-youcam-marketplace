@@ -115,6 +115,7 @@ describe("authorized offer read model", () => {
 
     expect(snapshot.offers).toHaveLength(3);
     expect(snapshot).toMatchObject({
+      reservationId: null,
       eventStartsAt: "2026-09-21T00:00:00.000Z",
       urgency: "planned",
       assuranceCoverage: "primary_and_backup",

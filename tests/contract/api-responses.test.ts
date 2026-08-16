@@ -78,6 +78,7 @@ const offer = {
 
 const offerSnapshot = {
   briefId: ids.brief,
+  reservationId: null,
   matchingRevision: 1,
   briefStatus: "active",
   eventStartsAt: "2099-06-12T00:00:00.000Z",
@@ -138,6 +139,9 @@ describe("public API response contracts", () => {
     const { readiness: _readiness, ...withoutReadiness } = offerSnapshot.offers[0]!;
 
     expect(offerSnapshotSchema.safeParse(withoutCoverage).success).toBe(false);
+    expect(
+      offerSnapshotSchema.safeParse({ ...offerSnapshot, reservationId: undefined }).success,
+    ).toBe(false);
     expect(
       offerSnapshotSchema.safeParse({ ...offerSnapshot, hiddenAssuranceState: "unreviewed" })
         .success,

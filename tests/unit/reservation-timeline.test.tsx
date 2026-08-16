@@ -92,6 +92,17 @@ describe("ReservationTimeline", () => {
     expect(push).toHaveBeenCalledWith("/reservations/backup-reservation");
   });
 
+  it("keeps one-tap recovery available after the primary response window expires", () => {
+    render(
+      <ReservationTimeline
+        reservation={{ ...reservation("cancelled"), offerStatus: "expired" }}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Backup available" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Activate backup look" })).toBeEnabled();
+  });
+
   it("posts the default backup command with a fresh idempotency key and follows its reservation", async () => {
     const response = new Response(JSON.stringify({ id: "default-backup-reservation" }), {
       status: 200,

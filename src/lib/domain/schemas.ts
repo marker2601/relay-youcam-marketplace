@@ -215,6 +215,7 @@ export const offerSnapshotItemSchema = z.strictObject({
 
 export const offerSnapshotSchema = z.strictObject({
   briefId: z.uuid(),
+  reservationId: z.uuid().nullable(),
   matchingRevision: z.number().int().positive(),
   briefStatus: briefStatusSchema,
   eventStartsAt: dateTimeSchema,

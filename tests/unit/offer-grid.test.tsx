@@ -21,6 +21,7 @@ function snapshot(
 ): OfferSnapshot {
   return {
     briefId: "51000000-0000-4000-8000-000000000001",
+    reservationId: null,
     matchingRevision: 1,
     briefStatus,
     eventStartsAt: "2026-08-17T01:00:00.000Z",
@@ -162,6 +163,29 @@ describe("OfferGrid", () => {
     expect(screen.queryByRole("button", { name: /^Request / })).not.toBeInTheDocument();
     expect(screen.getByText(/finishing your independent backup/i)).toBeVisible();
   });
+
+  it.each(["expired", "declined"] as const)(
+    "keeps a %s primary bound to reservation recovery instead of reopening its backup",
+    (primaryStatus) => {
+      const recovery = {
+        ...snapshot(
+          [primaryStatus, "ready", "expired"],
+          "active",
+          ["primary", "backup", "alternative"],
+        ),
+        reservationId: "53000000-0000-4000-8000-000000000001",
+      } as OfferSnapshot;
+
+      render(<OfferGrid snapshot={recovery} onImageExpired={vi.fn()} />);
+
+      expect(screen.queryByRole("button", { name: /^Request / })).not.toBeInTheDocument();
+      expect(screen.getByText("Backup look")).toBeVisible();
+      expect(screen.getByRole("link", { name: "View reservation" })).toHaveAttribute(
+        "href",
+        "/reservations/53000000-0000-4000-8000-000000000001",
+      );
+    },
+  );
 
   it("turns migrated alternative defaults into one coherent requestable plan", () => {
     const migrated = snapshot(

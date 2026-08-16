@@ -9,6 +9,7 @@ import {
   matches,
   mediaObjects,
   offers,
+  reservations,
   tryOnJobs,
   users,
 } from "@/lib/db/schema";
@@ -43,6 +44,27 @@ export async function getAuthorizedOfferSnapshot(
     .where(and(eq(eventBriefs.id, briefId), eq(eventBriefs.shopperId, actor.userId)))
     .limit(1);
   if (!brief) throw new NotFoundError();
+
+  const briefReservations = await db
+    .select({
+      id: reservations.id,
+      offerId: reservations.offerId,
+      backupOfferId: reservations.backupOfferId,
+      supersedesReservationId: reservations.supersedesReservationId,
+    })
+    .from(reservations)
+    .where(
+      and(
+        eq(reservations.briefId, briefId),
+        eq(reservations.shopperId, actor.userId),
+      ),
+    );
+  const initialReservation = briefReservations.find(
+    (reservation) => reservation.supersedesReservationId === null,
+  );
+  const currentReservation =
+    briefReservations.find((reservation) => reservation.supersedesReservationId !== null) ??
+    initialReservation;
 
   const rows = await db
     .select({
@@ -85,11 +107,22 @@ export async function getAuthorizedOfferSnapshot(
     .orderBy(desc(matches.scoreBasisPoints), asc(matches.listingId))
     .limit(3);
 
-  const effectiveRoles = assignAssuranceRoles(
-    rows
-      .filter((row) => row.status !== "failed" && row.status !== "expired")
-      .map((row) => ({ id: row.id, providerId: row.providerId })),
-  );
+  const effectiveRoles = initialReservation
+    ? new Map(
+        rows.map((row) => [
+          row.id,
+          row.id === initialReservation.offerId
+            ? ("primary" as const)
+            : row.id === initialReservation.backupOfferId
+              ? ("backup" as const)
+              : ("alternative" as const),
+        ]),
+      )
+    : assignAssuranceRoles(
+        rows
+          .filter((row) => row.status !== "failed" && row.status !== "expired")
+          .map((row) => ({ id: row.id, providerId: row.providerId })),
+      );
   const roleOrder = { primary: 0, backup: 1, alternative: 2 } as const;
   const normalizedRows = rows
     .map((row) => ({
@@ -164,6 +197,7 @@ export async function getAuthorizedOfferSnapshot(
 
   return {
     briefId,
+    reservationId: currentReservation?.id ?? null,
     matchingRevision: brief.revision,
     briefStatus: brief.status,
     eventStartsAt: brief.eventStartsAt.toISOString(),

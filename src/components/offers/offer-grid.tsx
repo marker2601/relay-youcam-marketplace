@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { OfferCard } from "@/components/offers/offer-card";
@@ -23,7 +24,9 @@ const assuranceRoleOrder = {
 
 function normalizePresentationRoles(
   offers: OfferSnapshot["offers"],
+  reservationId: OfferSnapshot["reservationId"],
 ): OfferSnapshot["offers"] {
+  if (reservationId !== null) return offers;
   const activeOffers = offers.filter(
     (offer) => offer.status !== "failed" && offer.status !== "expired",
   );
@@ -90,7 +93,7 @@ export function OfferGrid({ snapshot, refinement, onRefine, onImageExpired }: Of
   const [refining, setRefining] = useState(false);
   const [refineError, setRefineError] = useState<string | null>(null);
   const noMatches = snapshot.briefStatus === "no_matches" || snapshot.offers.length === 0;
-  const presentationOffers = normalizePresentationRoles(snapshot.offers);
+  const presentationOffers = normalizePresentationRoles(snapshot.offers, snapshot.reservationId);
   const orderedOffers = [...presentationOffers].sort(
     (left, right) =>
       assuranceRoleOrder[left.assuranceRole] - assuranceRoleOrder[right.assuranceRole],
@@ -103,6 +106,7 @@ export function OfferGrid({ snapshot, refinement, onRefine, onImageExpired }: Of
     backup !== undefined && backup.status === "ready" && Boolean(backup.resultImageUrl);
   const primaryCanRequest =
     primary !== undefined &&
+    snapshot.reservationId === null &&
     primary.status === "ready" &&
     Boolean(primary.resultImageUrl) &&
     (backup === undefined || backupReady);
@@ -191,6 +195,13 @@ export function OfferGrid({ snapshot, refinement, onRefine, onImageExpired }: Of
               </span>
             </p>
           </div>
+          {snapshot.reservationId ? (
+            <p className="offer-action-note">
+              This shortlist is already connected to a reservation. Use its status page for
+              confirmation or backup recovery.{" "}
+              <Link href={`/reservations/${snapshot.reservationId}`}>View reservation</Link>
+            </p>
+          ) : null}
           <div className="offer-grid">
             {orderedOffers.map((offer) => (
               <OfferCard

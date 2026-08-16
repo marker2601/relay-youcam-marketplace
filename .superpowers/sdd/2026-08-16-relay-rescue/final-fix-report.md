@@ -79,3 +79,27 @@ GREEN runs:
 ## Remaining concerns
 
 None for the reviewed scope. No blocker was deferred.
+
+## Final scoped re-review: reservation-bound recovery
+
+The re-review found one remaining action-state mismatch after a primary response timeout. Reconciliation correctly cancelled the reservation and expired its primary offer, but shortlist role normalization discarded the expired primary and promoted the designated backup. The client then exposed a new Request action that the reservation repository correctly rejected because an initial reservation already existed.
+
+Resolution:
+
+- Offer snapshots now project the shopper-owned current `reservationId` as canonical brief reservation state.
+- Once an initial reservation exists, server role projection binds `primary` and `backup` to that reservation's selected offer and designated backup instead of re-ranking survivors.
+- Client presentation normalization preserves those server-bound roles and never exposes an initial Request while `reservationId` is present.
+- The shortlist links directly to the current reservation timeline for confirmation or backup recovery.
+- Timeout detail continues to expose `canActivateBackup`, and the real repository activation path creates the superseding backup request.
+- No-reservation shortlists still produce one requestable primary; provider-declined and timed-out primaries both remain recovery-bound.
+
+Round-two TDD evidence:
+
+- RED: focused integration/component/contract run produced 4 expected failures across 3 files. The snapshot lacked reservation state, the timed-out backup became primary, Request reopened, and the strict contract rejected the new state field.
+- GREEN: focused recovery assurance passed 5 files and 71 tests.
+- Full `npm.cmd test`: 28 files and 259 tests passed.
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd run lint`: exit 0 with the same 3 documented negative-fixture warnings.
+- `npm.cmd run build`: passed.
+- `npm.cmd run test:e2e`: 16/16 passed across desktop Chromium and mobile.
+- No deploy or push was performed; protected Devpost state remained untouched.

@@ -13,11 +13,13 @@ import {
   ListingRepository,
 } from "@/lib/repositories/listings";
 import { MarketplaceRepository } from "@/lib/repositories/marketplace";
+import { getAuthorizedOfferSnapshot } from "@/lib/repositories/offer-read";
 import {
   ReservationConflictError,
   ReservationRepository,
 } from "@/lib/repositories/reservations";
 import { NotFoundError } from "@/lib/repositories/briefs";
+import type { ObjectStore } from "@/lib/storage/object-store";
 import { seedIds, seedRelay } from "../../scripts/seed";
 import {
   closeTestDatabase,
@@ -37,6 +39,17 @@ const now = new Date("2026-08-15T12:00:00.000Z");
 const shopper: Actor = { userId: seedIds.shopper, role: "shopper" };
 const boutique: Actor = { userId: seedIds.boutique, role: "provider" };
 const jordan: Actor = { userId: seedIds.peerJordan, role: "provider" };
+
+const readOnlyObjectStore: ObjectStore = {
+  async putPrivate() {},
+  async getPrivate() {
+    throw new Error("not used");
+  },
+  async delete() {},
+  async createReadUrl(key, expiresInSeconds) {
+    return `https://relay-storage.test/read/${encodeURIComponent(key)}?ttl=${expiresInSeconds}`;
+  },
+};
 
 let graph: Awaited<ReturnType<MarketplaceRepository["createMatchesAndJobs"]>>;
 
@@ -463,6 +476,51 @@ describe("reservation selection and provider decision", () => {
     expect(
       (await testDb.select().from(offers).where(eq(offers.id, primary.offerId)))[0]!.status,
     ).toBe("expired");
+  });
+
+  it("keeps a timed-out shortlist bound to its backup recovery reservation", async () => {
+    const repository = new ReservationRepository(testDb);
+    const primary = await repository.request(
+      shopper,
+      graph.offerIds[0]!,
+      "primary-timeout-recovery",
+      now,
+    );
+    const deadline = new Date(primary.responseDueAt);
+
+    const timedOut = await repository.getDetail(shopper, primary.id, deadline);
+    const snapshot = await getAuthorizedOfferSnapshot(
+      testDb,
+      shopper,
+      briefId,
+      readOnlyObjectStore,
+      deadline,
+    );
+
+    expect(timedOut).toMatchObject({
+      id: primary.id,
+      status: "cancelled",
+      offerStatus: "expired",
+      backupOfferId: graph.offerIds[1],
+      canActivateBackup: true,
+    });
+    expect(snapshot).toMatchObject({ reservationId: primary.id });
+    expect(snapshot.offers.find((offer) => offer.id === primary.offerId)).toMatchObject({
+      status: "expired",
+      assuranceRole: "primary",
+    });
+    expect(snapshot.offers.find((offer) => offer.id === primary.backupOfferId)).toMatchObject({
+      status: "ready",
+      assuranceRole: "backup",
+    });
+
+    await expect(
+      repository.activateBackup(shopper, primary.id, "activate-timeout-recovery", deadline),
+    ).resolves.toMatchObject({
+      offerId: primary.backupOfferId,
+      supersedesReservationId: primary.id,
+      status: "requested",
+    });
   });
 
   it("reconciles overdue requests before listing provider work", async () => {
