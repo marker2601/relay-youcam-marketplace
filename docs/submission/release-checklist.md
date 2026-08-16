@@ -42,7 +42,7 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 
 ## Required visual assets
 
-- [ ] Hero screenshot with the complete reliability promise.
+- [ ] Hero screenshot visibly includes both exact sentences: **Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities; Relay makes sure you have something to wear.**
 - [ ] Primary and independent backup YouCam previews with readiness components.
 - [ ] Primary decline followed by visible **Backup available**.
 - [ ] Backup provider acceptance followed by **Event ready**.

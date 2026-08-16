@@ -5,7 +5,7 @@ Capture at 1440×900 or larger unless a mobile frame is specified. Use the exist
 ## 1. Reliability promise
 
 - **State:** Signed out on the production home page.
-- **Frame:** Relay mark, complete headline, one-sentence primary/backup mechanism, and both marketplace entry actions.
+- **Frame:** Relay mark; both exact promise sentences; the primary/backup mechanism sentence; and both marketplace entry actions.
 - **Proof:** A judge understands within five seconds that Relay protects a time-sensitive fashion outcome.
 - **Suggested alt text:** “Relay home page promising a primary look, backup look, and owner confirmation for time-sensitive fashion.”
 

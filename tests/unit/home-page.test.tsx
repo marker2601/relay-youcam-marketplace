@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import HomePage from "@/app/page";
 
 describe("HomePage", () => {
-  it("states Relay's event-assurance promise and mechanism", () => {
+  it("states Relay's exact reliability promise", () => {
     render(<HomePage />);
 
     expect(screen.getByText("Event assurance, powered by local closets")).toBeVisible();
@@ -15,7 +15,7 @@ describe("HomePage", () => {
     ).toBeVisible();
     expect(
       screen.getByText(
-        "Discovery apps show possibilities. Relay builds a primary look, a backup look, and an owner-confirmed path to your event.",
+        "Discovery apps show possibilities; Relay makes sure you have something to wear.",
       ),
     ).toBeVisible();
   });

@@ -25,7 +25,7 @@ YouCam AI Clothes Virtual Try-On v3 renders each candidate. Relay adds an explai
 
 The prototype demonstrates provider-confirmed reservation intent. It collects no payment and does not guarantee fit, delivery, availability, return reduction, or environmental impact. Providers never receive the shopper's source photo or measurement profile.
 
-The current business-model hypothesis is an 18% commission on completed rentals. A future version could test an event-assurance fee and route boutique inventory, retailer returns, or local deadstock into urgent demand. Those future channels are not implemented.
+The current business-model hypothesis is an 18% commission on completed rentals. Relay already routes demand across peer closets and boutique inventory. A future version could test an event-assurance fee and route retailer returns or local deadstock into urgent demand. Those future capabilities are not implemented.
 
 ## How YouCam is used
 
@@ -37,7 +37,7 @@ YouCam file registration returns the upload method, signed URL, and required hea
 
 ## Underexplored industry or use case
 
-Most virtual try-on experiences optimize a catalog page. Relay uses VTO inside a failure-tolerant demand-routing marketplace. The shopper's urgent outcome—not catalog browsing—is the organizing object. Independent suppliers, stable primary/backup roles, deadlines, and preserved previews make YouCam useful precisely when the first transaction path fails. The same mechanism could later serve stylist networks, university formalwear closets, venues, boutique inventory, and retailer returns, but this submission implements occasionwear only.
+Most virtual try-on experiences optimize a catalog page. Relay uses VTO inside a failure-tolerant demand-routing marketplace. The shopper's urgent outcome—not catalog browsing—is the organizing object. Independent suppliers, stable primary/backup roles, deadlines, and preserved previews make YouCam useful precisely when the first transaction path fails. Relay implements peer and boutique occasionwear supply today; the same mechanism could later serve stylist networks, university formalwear closets, venues, and retailer returns.
 
 ## Technical wall and workaround
 

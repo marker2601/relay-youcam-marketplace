@@ -59,7 +59,7 @@ Server-side assurance rules classify urgency, assign stable roles, calculate bou
 
 Relay does not add a try-on button to another catalog. It uses YouCam as visual confidence inside a new coordination mechanism: event demand arrives first, distributed one-of-one inventory is ranked into a resilient plan, two independent suppliers reduce correlated failure, and a preserved preview makes recovery immediate. The product is valuable precisely when the first choice fails.
 
-That mechanism can later serve boutique inventory, stylist networks, university formalwear closets, hotel or venue guest services, and retailer returns or local deadstock. Those channels are market-expansion hypotheses, not integrations in this prototype.
+Relay already routes demand across peer closets and boutique inventory. The same mechanism could later serve stylist networks, university formalwear closets, hotel or venue guest services, and retailer returns or local deadstock. Those additional channels are market-expansion hypotheses, not integrations in this prototype.
 
 ## Potential impact and business model
 

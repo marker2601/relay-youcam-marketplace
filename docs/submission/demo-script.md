@@ -18,7 +18,7 @@ Record the verified production flow at 1080p using the existing synthetic, conse
 
 **Visual:** Submit and let the three candidates resolve. Frame the primary and backup together. Point to their distinct provider names, YouCam results, readiness totals and components, event countdown, plan-resilience note, and fit disclaimer.
 
-**Voiceover:** “Hard filters and explainable ranking produce at most three matches. Relay assigns the strongest as primary and prefers a different provider for the backup. YouCam Clothes v3 renders each candidate independently. The readiness score explains availability, measurements, proximity, style, and confirmation; it is not a fit or delivery guarantee.”
+**Voiceover:** “Hard filters produce at most three explainable matches. Relay assigns the strongest as primary and prefers a different provider for the backup. On Relay's server, each Clothes v3 preview uses YouCam's signed file registration and upload, task creation and bounded polling, then a private result copy. Readiness explains availability, measurements, proximity, style, and confirmation; it is not a guarantee.”
 
 ## 1:10–1:35 — Primary provider declines
 
@@ -42,7 +42,7 @@ Record the verified production flow at 1080p using the existing synthetic, conse
 
 **Visual:** End on the hero or a clean closing slide; briefly show the privacy/deletion control.
 
-**Voiceover:** “Relay's current business-model hypothesis is an 18 percent commission on completed rentals. A future version could test an event-assurance fee and route boutique inventory, retailer returns, or local deadstock into urgent demand. Today, Relay proves the core: visual confidence plus a resilient two-provider plan.”
+**Voiceover:** “Relay's current hypothesis is an 18 percent commission on completed rentals. Today it routes peer closets and boutique inventory. A future version could test an event-assurance fee and route retailer returns or local deadstock into urgent demand. Relay proves the core: visual confidence plus a resilient two-provider plan.”
 
 ## Recording checklist
 

@@ -6,9 +6,9 @@ export default function HomePage() {
       <p className="eyebrow">Event assurance, powered by local closets</p>
       <h1>Relay is the reliability layer for time-sensitive fashion.</h1>
       <p className="lede">
-        Discovery apps show possibilities. Relay builds a primary look, a backup look, and an
-        owner-confirmed path to your event.
+        Discovery apps show possibilities; Relay makes sure you have something to wear.
       </p>
+      <p>Get a primary look, a backup look, and owner confirmation before your event.</p>
       <nav aria-label="Get started" className="home-actions">
         <DemoEntryLink
           className="primary-action"
