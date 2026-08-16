@@ -149,6 +149,40 @@ describe("OfferGrid", () => {
     ).toBeVisible();
   });
 
+  it("demotes stale failed roles after survivor rebalance without mutating the snapshot", () => {
+    const rebalanced = snapshot(
+      ["failed", "ready", "ready"],
+      "active",
+      ["primary", "primary", "backup"],
+    );
+    rebalanced.offers[0]!.provider.id = "provider-new-backup";
+    rebalanced.offers[1]!.provider.id = "provider-new-primary";
+    rebalanced.offers[2]!.provider.id = "provider-new-backup";
+
+    render(<OfferGrid snapshot={rebalanced} onImageExpired={vi.fn()} />);
+
+    const cards = screen.getAllByRole("article");
+    expect(screen.getAllByText("Primary look")).toHaveLength(1);
+    expect(screen.getAllByText("Backup look")).toHaveLength(1);
+    expect(screen.getAllByText("Another option")).toHaveLength(1);
+    expect(cards[0]).toHaveAttribute("data-assurance-role", "primary");
+    expect(cards[0]).toHaveAttribute("data-provider-id", "provider-new-primary");
+    expect(cards[1]).toHaveAttribute("data-assurance-role", "backup");
+    expect(cards[1]).toHaveAttribute("data-provider-id", "provider-new-backup");
+    expect(cards[2]).toHaveAttribute("data-assurance-role", "alternative");
+    expect(within(cards[2]!).getByText("Preview unavailable—garment can still be reviewed")).toBeVisible();
+    expect(
+      screen.getByText(
+        "Independent providers reduce the chance that one cancellation leaves you without a plan",
+      ),
+    ).toBeVisible();
+    expect(rebalanced.offers.map((offer) => offer.assuranceRole)).toEqual([
+      "primary",
+      "primary",
+      "backup",
+    ]);
+  });
+
   it.each([
     [["matched", "matched", "matched"], "3 matches found. Preview generation starts now."],
     [["generating", "generating", "generating"], "Preparing 3 previews."],

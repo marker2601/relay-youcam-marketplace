@@ -20,6 +20,24 @@ const assuranceRoleOrder = {
   alternative: 2,
 } as const;
 
+function normalizePresentationRoles(
+  offers: OfferSnapshot["offers"],
+): OfferSnapshot["offers"] {
+  const activeRoles = new Set<"primary" | "backup">();
+
+  return offers.map((offer) => {
+    const role = offer.assuranceRole;
+    if (role === "alternative") return offer;
+    const ownsActiveRole =
+      offer.status !== "failed" && offer.status !== "expired" && !activeRoles.has(role);
+    if (ownsActiveRole) {
+      activeRoles.add(role);
+      return offer;
+    }
+    return { ...offer, assuranceRole: "alternative" };
+  });
+}
+
 function announcement(snapshot: OfferSnapshot): string {
   if (snapshot.briefStatus === "no_matches" || snapshot.offers.length === 0) {
     return "No strong matches yet. Adjust your search to try again.";
@@ -53,7 +71,8 @@ export function OfferGrid({ snapshot, refinement, onRefine, onImageExpired }: Of
   const [refining, setRefining] = useState(false);
   const [refineError, setRefineError] = useState<string | null>(null);
   const noMatches = snapshot.briefStatus === "no_matches" || snapshot.offers.length === 0;
-  const orderedOffers = [...snapshot.offers].sort(
+  const presentationOffers = normalizePresentationRoles(snapshot.offers);
+  const orderedOffers = [...presentationOffers].sort(
     (left, right) =>
       assuranceRoleOrder[left.assuranceRole] - assuranceRoleOrder[right.assuranceRole],
   );
@@ -138,7 +157,7 @@ export function OfferGrid({ snapshot, refinement, onRefine, onImageExpired }: Of
             <p className="assurance-plan__resilience">
               <strong>Plan coverage</strong>
               <span>
-                {snapshot.assuranceCoverage === "primary_only"
+                {primary === undefined || backup === undefined
                   ? "Primary only—widen budget, radius, or category to add protection"
                   : usesIndependentProviders
                     ? "Independent providers reduce the chance that one cancellation leaves you without a plan"

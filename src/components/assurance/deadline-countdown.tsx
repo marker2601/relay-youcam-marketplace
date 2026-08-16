@@ -17,21 +17,34 @@ export function DeadlineCountdown({
   completeLabel,
   prefix,
 }: DeadlineCountdownProps) {
-  const [remainingMs, setRemainingMs] = useState(() => remainingUntil(target));
+  const [remainingMs, setRemainingMs] = useState<number | null>(null);
 
   useEffect(() => {
-    const update = () => setRemainingMs(remainingUntil(target));
+    let timer: number | undefined;
+    const update = () => {
+      const nextRemainingMs = remainingUntil(target);
+      setRemainingMs(nextRemainingMs);
+      if (nextRemainingMs > 0) {
+        timer = window.setTimeout(update, Math.min(1_000, nextRemainingMs));
+      }
+    };
     update();
-    const timer = window.setInterval(update, 1_000);
-    return () => window.clearInterval(timer);
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
   }, [target]);
 
-  const minutes = Math.floor(remainingMs / 60_000);
-  const seconds = Math.floor((remainingMs % 60_000) / 1_000);
+  const totalSeconds = remainingMs === null ? null : Math.ceil(remainingMs / 1_000);
+  const minutes = totalSeconds === null ? null : Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds === null ? null : totalSeconds % 60;
 
   return (
     <span aria-live="polite" aria-atomic="true">
-      {remainingMs === 0 ? completeLabel : `${prefix} ${minutes}m ${seconds}s`}
+      {remainingMs === null
+        ? `${prefix} …`
+        : remainingMs === 0
+          ? completeLabel
+          : `${prefix} ${minutes}m ${seconds}s`}
     </span>
   );
 }
