@@ -1,7 +1,17 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
-import { NARRATION_CHAPTERS, VOICE_PROFILE, VOICE_SAMPLE_SEGMENTS } from "../../scripts/video/professional-demo-v2";
+import {
+  buildHumanHandoffAss,
+  HUMAN_HANDOFF_CUES,
+  NARRATION_CHAPTERS,
+  validateMotionCues,
+  VOICE_PROFILE,
+  VOICE_SAMPLE_SEGMENTS,
+} from "../../scripts/video/professional-demo-v2";
+import { runOverlayRenderer } from "../../scripts/render-professional-overlay-v2";
 
 describe("professional demo v2 narration", () => {
   it("uses the approved friendly female neural profile", () => {
@@ -41,5 +51,90 @@ describe("professional demo v2 narration", () => {
 
     expect(generator).toContain("loudnorm=I=-16:TP=-1.5:LRA=11");
     expect(generator).toContain("relay-professional-narration-v2-loudness.json");
+  });
+});
+
+describe("professional demo v2 Human Handoff motion", () => {
+  it("contains the six approved one-shot story beats in order", () => {
+    expect(HUMAN_HANDOFF_CUES.map((cue) => cue.id)).toEqual([
+      "shopper-brief",
+      "youcam-flow",
+      "primary-backup-plan",
+      "primary-declines",
+      "backup-reroute",
+      "event-ready",
+    ]);
+  });
+
+  it("keeps every cue inside the safe overlay zones", () => {
+    expect(() => validateMotionCues(180)).not.toThrow();
+    for (const cue of HUMAN_HANDOFF_CUES) {
+      expect(cue.startSeconds).toBeLessThan(cue.endSeconds);
+      expect(cue.loop).toBe(false);
+      expect(cue.box.x).toBeGreaterThanOrEqual(40);
+      expect(cue.box.y).toBeGreaterThanOrEqual(40);
+      expect(cue.box.x + cue.box.width).toBeLessThanOrEqual(1880);
+      expect(cue.box.y + cue.box.height).toBeLessThanOrEqual(900);
+    }
+  });
+
+  it("rejects non-finite geometry instead of admitting an invalid safe-zone cue", () => {
+    const firstCue = HUMAN_HANDOFF_CUES[0]!;
+    const invalidCue = {
+      ...firstCue,
+      box: { ...firstCue.box, x: Number.NaN },
+    };
+    expect(() => validateMotionCues(180, [invalidCue])).toThrow("safe overlay zone");
+  });
+
+  it("renders required role, recovery, and architecture copy", () => {
+    const ass = buildHumanHandoffAss({ durationSeconds: 150, captions: [] });
+    for (const text of [
+      "SHOPPER",
+      "PRIMARY",
+      "BACKUP",
+      "PRIMARY DECLINES",
+      "BACKUP READY",
+      "EVENT READY",
+      "Signed upload",
+      "Clothes v3",
+      "Private result",
+    ]) expect(ass).toContain(text);
+  });
+
+  it("uses chapter-relative timestamps and never combines pos with move", () => {
+    const ass = buildHumanHandoffAss({
+      durationSeconds: 150,
+      chapterStarts: { promise: 0, brief: 11, plan: 25, failure: 51, recovery: 71, ready: 85, youcam: 101, business: 123 },
+      captions: [],
+    });
+    expect(ass).toContain("Dialogue: 4,0:00:11.50");
+    for (const event of ass.split("\r\n").filter((line) => line.startsWith("Dialogue:") && line.includes("\\move"))) {
+      expect(event).not.toContain("\\pos");
+    }
+  });
+
+  it("renders a deterministic timing fixture with named cues and caption layer 10", async () => {
+    const fixtureDirectory = await mkdtemp(join(tmpdir(), "relay-overlay-v2-"));
+    const timingPath = join(fixtureDirectory, "timings.json");
+    const captionPath = join(fixtureDirectory, "captions.json");
+    const outputPath = join(fixtureDirectory, "overlay.ass");
+
+    await writeFile(timingPath, JSON.stringify({
+      audioDurationSeconds: 150,
+      chapterStarts: { promise: 0, brief: 11, plan: 25, failure: 51, recovery: 71, ready: 85, youcam: 101, business: 123 },
+    }), "utf8");
+    await writeFile(captionPath, JSON.stringify([
+      { startSeconds: 1, endSeconds: 2.5, text: "Relay keeps a backup ready." },
+    ]), "utf8");
+
+    try {
+      await runOverlayRenderer({ timingPath, captionPath, outputPath, repositoryRoot: fixtureDirectory });
+      const ass = await readFile(outputPath, "utf8");
+      for (const cue of HUMAN_HANDOFF_CUES) expect(ass).toContain(`,${cue.id},`);
+      expect(ass).toContain("Dialogue: 10,0:00:01.00,0:00:02.50,Caption,caption-1");
+    } finally {
+      await rm(fixtureDirectory, { recursive: true, force: true });
+    }
   });
 });
