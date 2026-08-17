@@ -14,12 +14,12 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 
 ## Exact local v2 video-master verification
 
-- [x] Exact candidate `docs/submission/assets/relay-professional-demo-v2.mp4` verified: SHA-256 `EC2449532A49FFEF490402A344F20559D43DD532315BD64C0430E593D36651C4`; 160.933333 seconds; 4,828 decoded frames.
+- [x] Exact candidate `docs/submission/assets/relay-professional-demo-v2.mp4` verified: SHA-256 `60FE80A9308E48E5FF3835279DB7E9BD177332B39D27D44635D27BA2DE62213B`; 160.933333 seconds; 4,828 decoded frames.
 - [x] Master contract passed: H.264 `yuv420p`, 1920x1080 at 30 fps; AAC stereo at 48 kHz; `ftyp` -> `moov` -> `mdat`; full-frame decode.
-- [x] Audio passed: -16.0 LUFS integrated, -2.0 dBFS true peak, and no `silencedetect=noise=-45dB:d=1.2` interval.
+- [x] Audio passed: -16.0 LUFS integrated, -1.9 dBFS true peak, and no `silencedetect=noise=-45dB:d=1.2` interval.
 - [x] Visual continuity passed: no `blackdetect=d=0.2:pix_th=0.10` interval; sequential and independently-seeked raw-RGB frames matched at 12%, 35%, 60%, 84%, and 98%.
 - [x] Full local `ggml-base.en` ASR retained the binding product claims, $0/no-payments disclosures, limitations, and 18% commission hypothesis.
-- [x] 39 UTF-8 caption cues and eight chapter cues pass the non-overlap compositor contract; shopper is gold, primary is coral, and backup is green.
+- [x] 49 UTF-8 caption cues and eight chapter cues pass the non-overlap compositor contract; every cue has at most two lines and every line is at most 43 characters; shopper is gold, primary is coral, and backup is green.
 - [x] Fresh focused verification: typecheck; lint (0 errors, 3 known fixture warnings); v2 unit 29/29; PowerShell parse; exact-master verifier; and `git diff --check`.
 - [ ] Replacement pending final visual/ASR review. Do not upload, attach, or change the existing public video and Devpost URL until the coordinator completes release review.
 

@@ -102,7 +102,7 @@ function Get-CanonicalTimingManifest([string]$Path) {
 
 function Test-CaptionOverlayCorrelation([string]$CaptionPath, [string]$OverlayPath, [double]$AudioDuration) {
   Test-Utf8WithoutBom -Path $CaptionPath -Label 'Caption JSON'
-  $captionSource = Get-Content -Raw -LiteralPath $CaptionPath
+  $captionSource = Get-Content -Raw -LiteralPath $CaptionPath -Encoding UTF8
   if (-not $captionSource.TrimStart().StartsWith('[')) { throw 'Caption JSON must be an array' }
   $captions = @((ConvertFrom-Json -InputObject $captionSource) | ForEach-Object { $_ })
   [double]$previousCaptionEnd = 0
@@ -112,6 +112,11 @@ function Test-CaptionOverlayCorrelation([string]$CaptionPath, [string]$OverlayPa
     $start = [double]$caption.startSeconds
     $end = [double]$caption.endSeconds
     if (-not (Test-FiniteDouble $start) -or -not (Test-FiniteDouble $end) -or $start -lt 0 -or $end -le $start -or $end -gt $AudioDuration -or [string]::IsNullOrWhiteSpace([string]$caption.text)) { throw "Caption $($index + 1) is malformed" }
+    $captionLines = @(([string]$caption.text) -split "`r?`n")
+    if ($captionLines.Count -gt 2) { throw "Caption $($index + 1) has more than two lines" }
+    for ($lineIndex = 0; $lineIndex -lt $captionLines.Count; $lineIndex++) {
+      if ($captionLines[$lineIndex].Length -gt 43) { throw "Caption $($index + 1) line $($lineIndex + 1) exceeds 43 characters" }
+    }
     if ($index -gt 0 -and $start -lt $previousCaptionEnd) { throw "Caption $($index + 1) overlaps the previous caption" }
     $previousCaptionEnd = $end
   }

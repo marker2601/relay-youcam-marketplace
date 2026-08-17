@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
   [switch]$VoiceSampleOnly,
-  [double]$InspectPreparedDurationSeconds = [double]::NaN
+  [double]$InspectPreparedDurationSeconds = [double]::NaN,
+  [string]$InspectCaptionPath,
+  [switch]$NormalizeCaptionCues
 )
 
 $ErrorActionPreference = 'Stop'
@@ -10,8 +12,84 @@ function Get-SpokenDurationSeconds([double]$PreparedDurationSeconds, [double]$Ch
   return [Math]::Max([double]0, $PreparedDurationSeconds - $ChapterPauseSeconds)
 }
 
+function Assert-CaptionLayout([object[]]$Captions) {
+  for ($captionIndex = 0; $captionIndex -lt $Captions.Count; $captionIndex++) {
+    $caption = $Captions[$captionIndex]
+    $lines = @([string]$caption.text -split "`r?`n")
+    if ($lines.Count -gt 2) { throw "Caption $($captionIndex + 1) has more than two lines" }
+    for ($lineIndex = 0; $lineIndex -lt $lines.Count; $lineIndex++) {
+      if ($lines[$lineIndex].Length -gt 43) { throw "Caption $($captionIndex + 1) line $($lineIndex + 1) exceeds 43 characters" }
+    }
+    if ([double]::IsNaN([double]$caption.startSeconds) -or [double]::IsInfinity([double]$caption.startSeconds) -or [double]::IsNaN([double]$caption.endSeconds) -or [double]::IsInfinity([double]$caption.endSeconds) -or [double]$caption.endSeconds -le [double]$caption.startSeconds) {
+      throw "Caption $($captionIndex + 1) has invalid timing"
+    }
+    if ($captionIndex -gt 0 -and [double]$caption.startSeconds -ne [double]$Captions[$captionIndex - 1].endSeconds -and [double]$caption.startSeconds -lt [double]$Captions[$captionIndex - 1].endSeconds) {
+      throw "Caption $($captionIndex + 1) overlaps the previous caption"
+    }
+  }
+}
+
+function Split-CaptionCue([object]$Caption) {
+  $words = @(([string]$Caption.text -replace '\s+', ' ').Trim() -split '\s+' | Where-Object { $_ })
+  if ($words.Count -eq 0) { throw 'Caption text cannot be empty.' }
+  $lines = [System.Collections.Generic.List[string]]::new()
+  $line = ''
+  foreach ($word in $words) {
+    if ($word.Length -gt 43) { throw "Caption word '$word' exceeds 43 characters" }
+    $candidate = if ($line) { "$line $word" } else { $word }
+    if ($candidate.Length -gt 43) {
+      $lines.Add($line)
+      $line = $word
+    } else {
+      $line = $candidate
+    }
+  }
+  if ($line) { $lines.Add($line) }
+
+  $chunkTexts = [System.Collections.Generic.List[string]]::new()
+  for ($lineIndex = 0; $lineIndex -lt $lines.Count; $lineIndex += 2) {
+    $chunkLines = @($lines[$lineIndex])
+    if ($lineIndex + 1 -lt $lines.Count) { $chunkLines += $lines[$lineIndex + 1] }
+    $chunkTexts.Add(($chunkLines -join "`n"))
+  }
+
+  [double]$totalWeight = @($chunkTexts | ForEach-Object { ($_ -replace '\s+', '').Length } | Measure-Object -Sum).Sum
+  [double]$start = [double]$Caption.startSeconds
+  [double]$end = [double]$Caption.endSeconds
+  [double]$duration = $end - $start
+  if ($duration -le 0) { throw 'Caption duration must be positive.' }
+  $result = @()
+  for ($chunkIndex = 0; $chunkIndex -lt $chunkTexts.Count; $chunkIndex++) {
+    $chunkText = $chunkTexts[$chunkIndex]
+    $chunkWeight = ($chunkText -replace '\s+', '').Length
+    $chunkEnd = if ($chunkIndex -eq $chunkTexts.Count - 1) { $end } else { [Math]::Round($start + ($duration * $chunkWeight / $totalWeight), 3) }
+    if ($chunkEnd -le $start) { throw 'Caption chunk duration must remain positive.' }
+    $result += [ordered]@{ startSeconds = $start; endSeconds = $chunkEnd; text = $chunkText }
+    $start = $chunkEnd
+    $totalWeight -= $chunkWeight
+    $duration = $end - $start
+  }
+  return $result
+}
+
+function Normalize-CaptionCues([object[]]$Captions) {
+  $normalized = @()
+  foreach ($caption in $Captions) { $normalized += Split-CaptionCue $caption }
+  Assert-CaptionLayout $normalized
+  return $normalized
+}
+
 if (-not [double]::IsNaN($InspectPreparedDurationSeconds)) {
   [Console]::WriteLine((Get-SpokenDurationSeconds -PreparedDurationSeconds $InspectPreparedDurationSeconds -ChapterPauseSeconds ([double]0.12)).ToString('0.000', [Globalization.CultureInfo]::InvariantCulture))
+  exit 0
+}
+
+if ($InspectCaptionPath) {
+  $inspectionSource = Get-Content -LiteralPath $InspectCaptionPath -Raw -Encoding UTF8
+  $inspectionCaptions = @((ConvertFrom-Json -InputObject $inspectionSource) | ForEach-Object { $_ })
+  if ($NormalizeCaptionCues) { $inspectionCaptions = @(Normalize-CaptionCues $inspectionCaptions) }
+  Assert-CaptionLayout $inspectionCaptions
+  [Console]::WriteLine(($inspectionCaptions | ConvertTo-Json -Depth 3 -Compress))
   exit 0
 }
 
@@ -250,6 +328,7 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'Could not create unnormalized narration WAV.' }
   $masterPath = Join-Path $assetsDirectory 'relay-professional-narration-v2.wav'
   $loudness = Normalize-Narration -SourcePath $rawMasterPath -TargetPath $masterPath
+  $captions = @(Normalize-CaptionCues $captions)
   $timingManifest = [ordered]@{
     audioDurationSeconds = [Math]::Round((Get-AudioDuration $masterPath), 3)
     chapterStarts = $chapterStarts
