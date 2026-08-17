@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
@@ -114,6 +114,46 @@ describe("professional demo v2 Human Handoff motion", () => {
     }
   });
 
+  it("resolves the six beats in the approved motion order", () => {
+    const ass = buildHumanHandoffAss({
+      durationSeconds: 150,
+      chapterStarts: { promise: 0, brief: 11, plan: 25, failure: 51, recovery: 71, ready: 85, youcam: 101, business: 123 },
+      captions: [],
+    });
+    const starts = ["shopper-brief", "youcam-flow", "primary-backup-plan", "primary-declines", "backup-reroute", "event-ready"].map((id) => {
+      const match = ass.match(new RegExp(`Dialogue: \\d+,([^,]+),[^,]+,Motion,${id},`));
+      expect(match?.[1]).toBeTruthy();
+      const [hours, minutes, seconds] = match![1]!.split(/[:.]/).map(Number);
+      return hours! * 3600 + minutes! * 60 + seconds! + Number(`0.${match![1]!.split(".")[1]}`);
+    });
+    expect(starts).toEqual([...starts].sort((left, right) => left - right));
+  });
+
+  it("keeps shopper, path, brief, and primary together for the handoff", () => {
+    const ass = buildHumanHandoffAss({ durationSeconds: 150, captions: [] });
+    const planEvents = ass.split("\r\n").filter((line) => line.includes(",primary-backup-plan,"));
+    const shopper = planEvents.find((line) => line.startsWith("Dialogue: 4,") && line.includes("&H0041A4D9"));
+    const primary = planEvents.find((line) => line.startsWith("Dialogue: 5,") && line.includes("&H006277E7"));
+    const path = planEvents.find((line) => line.includes("\\p1}m 0 0 l 260 0") && line.includes("\\move(650,310,650,310"));
+    const brief = planEvents.find((line) => line.includes("\\move(650,310,910,310") && line.includes("m 0 0 l 44 0"));
+
+    expect(shopper).toBeTruthy();
+    expect(primary).toBeTruthy();
+    expect(path).toBeTruthy();
+    expect(brief).toBeTruthy();
+    expect(shopper!.split(",").slice(1, 3)).toEqual(primary!.split(",").slice(1, 3));
+  });
+
+  it("renders a red vector chip behind PRIMARY DECLINES", () => {
+    const ass = buildHumanHandoffAss({ durationSeconds: 150, captions: [] });
+    const declineEvents = ass.split("\r\n").filter((line) => line.includes(",primary-declines,"));
+    const backgroundIndex = declineEvents.findIndex((line) => line.includes("&H005757D9") && line.includes("\\p1}m 0 0 l 270 0"));
+    const labelIndex = declineEvents.findIndex((line) => line.includes("PRIMARY DECLINES"));
+    expect(backgroundIndex).toBeGreaterThanOrEqual(0);
+    expect(labelIndex).toBeGreaterThan(backgroundIndex);
+    expect(declineEvents[backgroundIndex]!.split(",").slice(1, 3)).toEqual(declineEvents[labelIndex]!.split(",").slice(1, 3));
+  });
+
   it("renders a deterministic timing fixture with named cues and caption layer 10", async () => {
     const fixtureDirectory = await mkdtemp(join(tmpdir(), "relay-overlay-v2-"));
     const timingPath = join(fixtureDirectory, "timings.json");
@@ -135,6 +175,43 @@ describe("professional demo v2 Human Handoff motion", () => {
       expect(ass).toContain("Dialogue: 10,0:00:01.00,0:00:02.50,Caption,caption-1");
     } finally {
       await rm(fixtureDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed for missing and outside-repository timing inputs", async () => {
+    const repositoryRoot = await mkdtemp(join(tmpdir(), "relay-overlay-repository-"));
+    const outsideRoot = await mkdtemp(join(tmpdir(), "relay-overlay-outside-"));
+    const captionPath = join(repositoryRoot, "captions.json");
+    const outputPath = join(repositoryRoot, "overlay.ass");
+    const outsideTimingPath = join(outsideRoot, "timings.json");
+    const linkedTimingPath = join(repositoryRoot, "linked-timings.json");
+    const timings = JSON.stringify({
+      audioDurationSeconds: 150,
+      chapterStarts: { promise: 0, brief: 11, plan: 25, failure: 51, recovery: 71, ready: 85, youcam: 101, business: 123 },
+    });
+    await writeFile(captionPath, "[]", "utf8");
+    await writeFile(outsideTimingPath, timings, "utf8");
+
+    try {
+      await expect(runOverlayRenderer({
+        timingPath: join(repositoryRoot, "missing.json"), captionPath, outputPath, repositoryRoot,
+      })).rejects.toThrow("Required input file does not exist");
+      await expect(runOverlayRenderer({
+        timingPath: outsideTimingPath, captionPath, outputPath, repositoryRoot,
+      })).rejects.toThrow("Input path must stay inside the repository");
+
+      try {
+        await symlink(outsideTimingPath, linkedTimingPath, "file");
+      } catch (error) {
+        if (!(error instanceof Error) || !("code" in error) || error.code !== "EPERM") throw error;
+        return;
+      }
+      await expect(runOverlayRenderer({
+        timingPath: linkedTimingPath, captionPath, outputPath, repositoryRoot,
+      })).rejects.toThrow("Input path must stay inside the repository");
+    } finally {
+      await rm(repositoryRoot, { recursive: true, force: true });
+      await rm(outsideRoot, { recursive: true, force: true });
     }
   });
 });
