@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 
 export type VoiceProfile = Readonly<{
   engine: "edge-tts";
@@ -50,7 +51,10 @@ const CHAPTER_LABELS: readonly string[] = [
   "Backup recovery", "Event ready", "YouCam orchestration", "Business hypothesis",
 ];
 
-const narrationPath = resolve(process.cwd(), "docs/submission/assets/demo-narration.txt");
+const moduleDirectory = import.meta.url.startsWith("file:")
+  ? dirname(fileURLToPath(import.meta.url))
+  : resolve(process.cwd(), "scripts/video");
+const narrationPath = resolve(moduleDirectory, "../../docs/submission/assets/demo-narration.txt");
 const paragraphs = readFileSync(narrationPath, "utf8")
   .trim()
   .split(/\r?\n\s*\r?\n/)

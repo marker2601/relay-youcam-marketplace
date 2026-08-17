@@ -17,6 +17,31 @@ function Get-AudioDuration([string]$Path) {
   return [double]::Parse($duration, [Globalization.CultureInfo]::InvariantCulture)
 }
 
+function Get-LoudnormMeasurement([string]$Path) {
+  $analysis = & ffmpeg -hide_banner -i $Path -af 'loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json' -f null NUL 2>&1
+  if ($LASTEXITCODE -ne 0) { throw "FFmpeg loudness measurement failed for '$Path'." }
+  $jsonMatch = [regex]::Match(($analysis -join "`n"), '(?s)\{\s*"input_i".*?\}')
+  if (-not $jsonMatch.Success) { throw "FFmpeg did not emit loudness measurements for '$Path'." }
+  return $jsonMatch.Value | ConvertFrom-Json
+}
+
+function Normalize-Narration([string]$SourcePath, [string]$TargetPath) {
+  $input = Get-LoudnormMeasurement $SourcePath
+  $filter = "loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=$($input.input_i):measured_LRA=$($input.input_lra):measured_TP=$($input.input_tp):measured_thresh=$($input.input_thresh):offset=$($input.target_offset):linear=true:print_format=json"
+  $normalization = & ffmpeg -y -hide_banner -i $SourcePath -af $filter -ar 48000 -ac 2 -c:a pcm_s16le $TargetPath 2>&1
+  if ($LASTEXITCODE -ne 0) { throw "FFmpeg loudness normalization failed for '$SourcePath'." }
+  $jsonMatch = [regex]::Match(($normalization -join "`n"), '(?s)\{\s*"input_i".*?\}')
+  if (-not $jsonMatch.Success) { throw "FFmpeg did not emit normalized loudness measurements for '$TargetPath'." }
+  $output = $jsonMatch.Value | ConvertFrom-Json
+  return [ordered]@{
+    targetIntegratedLufs = -16
+    targetTruePeakDbfs = -1.5
+    filter = 'loudnorm=I=-16:TP=-1.5:LRA=11'
+    input = $input
+    output = $output
+  }
+}
+
 function Convert-SrtTime([string]$Value) {
   $parts = $Value.Trim() -split '[:,]'
   return ([double]$parts[0] * 3600) + ([double]$parts[1] * 60) + [double]$parts[2] + ([double]$parts[3] / 1000)
@@ -120,11 +145,14 @@ try {
   }
   $concatFile = Join-Path $workingDirectory 'chapters.ffconcat'
   [IO.File]::WriteAllLines($concatFile, $concatLines, [Text.UTF8Encoding]::new($false))
+  $rawMasterPath = Join-Path $workingDirectory 'relay-professional-narration-v2-raw.wav'
+  & ffmpeg -y -v error -f concat -safe 0 -i $concatFile -ar 48000 -ac 2 -c:a pcm_s16le $rawMasterPath
+  if ($LASTEXITCODE -ne 0) { throw 'Could not create unnormalized narration WAV.' }
   $masterPath = Join-Path $assetsDirectory 'relay-professional-narration-v2.wav'
-  & ffmpeg -y -v error -f concat -safe 0 -i $concatFile -ar 48000 -ac 2 -c:a pcm_s16le $masterPath
-  if ($LASTEXITCODE -ne 0) { throw 'Could not create narration master WAV.' }
+  $loudness = Normalize-Narration -SourcePath $rawMasterPath -TargetPath $masterPath
   $captions | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $assetsDirectory 'relay-professional-captions-v2.json') -Encoding utf8
   $timings | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $assetsDirectory 'relay-professional-timings-v2.json') -Encoding utf8
+  $loudness | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $assetsDirectory 'relay-professional-narration-v2-loudness.json') -Encoding utf8
 } finally {
   if (Test-Path -LiteralPath $workingDirectory) { Remove-Item -LiteralPath $workingDirectory -Recurse -Force }
 }
