@@ -62,9 +62,8 @@ Capture the verified production flow at 1080p using the existing synthetic, cons
 - [ ] Export H.264/AAC 1080p at 30 fps, under three minutes, with authored captions and no music.
 - [ ] Verify the master mechanically, then upload publicly and read the URL back from Devpost.
 
-## Prior published v2 record
+## Published v2 record
 
-- Prior public video, not the current release candidate: https://youtu.be/0hUbCwDbn4I
-- Prior published artifact identity: 161.600000 seconds; SHA-256 `BA1F60AE0C0B9CF13E5A228EDDB9E86560665773CAF5909E665E00064C857ABB`.
-- Current unpublished candidate: `docs/submission/assets/relay-professional-demo-v2.mp4`; 160.933333 seconds; SHA-256 `60FE80A9308E48E5FF3835279DB7E9BD177332B39D27D44635D27BA2DE62213B`.
-- Publication replacement remains pending; the prior public URL has not been changed by this verification task.
+- Current public video: https://youtu.be/QR8vyKPXSs8
+- Published artifact identity: `docs/submission/assets/relay-professional-demo-v2.mp4`; 160.933333 seconds; SHA-256 `60FE80A9308E48E5FF3835279DB7E9BD177332B39D27D44635D27BA2DE62213B`.
+- Prior public release, retained for provenance: https://youtu.be/0hUbCwDbn4I (161.600000 seconds; SHA-256 `BA1F60AE0C0B9CF13E5A228EDDB9E86560665773CAF5909E665E00064C857ABB`).

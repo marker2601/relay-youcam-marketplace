@@ -19,5 +19,6 @@ The video uses real production-product footage throughout. It demonstrates the p
 
 ## Publication and Devpost readback
 
-- Replacement pending: this exact locally verified master has **not** been uploaded, published, or attached to Devpost by this fix.
-- The prior public video and Devpost URL remain unchanged until final review confirms this replacement candidate.
+- Current public video: https://youtu.be/QR8vyKPXSs8. YouTube Studio completed processing and reported no copyright issues; independent public metadata resolved to the locked title, public visibility, and 160.933-second duration.
+- Devpost project `relay-xr7byl` was read back with this exact URL and `submitted_at: null`.
+- Prior public release https://youtu.be/0hUbCwDbn4I remains available and is not the active Devpost video.
