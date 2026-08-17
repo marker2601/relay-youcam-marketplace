@@ -116,26 +116,42 @@ function Test-CaptionOverlayCorrelation([string]$CaptionPath, [string]$OverlayPa
   if ($dialogueCount -ne $captions.Count) { throw 'ASS caption dialogue count does not match caption JSON' }
 }
 
-function Get-RepositoryRelativeSubtitlePath([string]$Path) {
-  $overlayItem = Get-Item -LiteralPath $Path -Force
-  $isReparsePoint = (($overlayItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
-  $linkTypeProperty = $overlayItem.PSObject.Properties['LinkType']
+function Test-LinkedOrReparsePoint([object]$Item) {
+  $isReparsePoint = (($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
+  $linkTypeProperty = $Item.PSObject.Properties['LinkType']
   $isLink = $null -ne $linkTypeProperty -and -not [string]::IsNullOrWhiteSpace([string]$linkTypeProperty.Value)
-  if ($isReparsePoint -or $isLink) { throw 'ASS overlay must stay inside the repository root' }
-  $absolutePath = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $Path).Path)
-  $resolvedRepositoryRoot = [IO.Path]::GetFullPath($repositoryRoot)
+  return $isReparsePoint -or $isLink
+}
+
+function Get-RepositoryRelativeSubtitlePath([string]$Path) {
+  $lexicalPath = [IO.Path]::GetFullPath($Path)
+  $lexicalRepositoryRoot = [IO.Path]::GetFullPath($repositoryRoot)
   $separatorCharacters = [char[]]@([IO.Path]::DirectorySeparatorChar)
   if ([IO.Path]::AltDirectorySeparatorChar -ne [IO.Path]::DirectorySeparatorChar) {
     $separatorCharacters += [IO.Path]::AltDirectorySeparatorChar
   }
-  $repositoryPrefix = $resolvedRepositoryRoot.TrimEnd([char[]]$separatorCharacters) + [IO.Path]::DirectorySeparatorChar
+  $repositoryPrefix = $lexicalRepositoryRoot.TrimEnd([char[]]$separatorCharacters) + [IO.Path]::DirectorySeparatorChar
   $pathComparison = if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
     [StringComparison]::OrdinalIgnoreCase
   } else {
     [StringComparison]::Ordinal
   }
-  if (-not $absolutePath.StartsWith($repositoryPrefix, $pathComparison)) { throw 'ASS overlay must stay inside the repository root' }
-  $relativePath = $absolutePath.Substring($repositoryPrefix.Length).Replace([string][IO.Path]::DirectorySeparatorChar, '/')
+  if (-not $lexicalPath.StartsWith($repositoryPrefix, $pathComparison)) { throw 'ASS overlay must stay inside the repository root' }
+
+  $relativeNativePath = $lexicalPath.Substring($repositoryPrefix.Length)
+  $currentPath = $lexicalRepositoryRoot
+  foreach ($component in @($relativeNativePath -split '[\\/]' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })) {
+    $currentPath = Join-Path $currentPath $component
+    if (Test-LinkedOrReparsePoint (Get-Item -LiteralPath $currentPath -Force)) {
+      throw 'ASS overlay must stay inside the repository root'
+    }
+  }
+
+  $absolutePath = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $Path).Path)
+  $resolvedRepositoryRoot = [IO.Path]::GetFullPath($repositoryRoot)
+  $resolvedRepositoryPrefix = $resolvedRepositoryRoot.TrimEnd([char[]]$separatorCharacters) + [IO.Path]::DirectorySeparatorChar
+  if (-not $absolutePath.StartsWith($resolvedRepositoryPrefix, $pathComparison)) { throw 'ASS overlay must stay inside the repository root' }
+  $relativePath = $absolutePath.Substring($resolvedRepositoryPrefix.Length).Replace([string][IO.Path]::DirectorySeparatorChar, '/')
   if (-not $relativePath -or $relativePath -match '(^|/)\.\.(/|$)') { throw 'ASS overlay path must be repository-relative' }
   return $relativePath
 }

@@ -1,5 +1,5 @@
 import { constants, readFileSync } from "node:fs";
-import { access, chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { delimiter, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
@@ -253,6 +253,27 @@ describe("professional demo v2 composition", () => {
       await rm(fixture.overlayPath);
       try {
         await symlink(outsideOverlayPath, fixture.overlayPath, "file");
+      } catch (error) {
+        if (error instanceof Error && "code" in error && error.code === "EPERM") return;
+        throw error;
+      }
+      await expectPreflightFailure(fixture, "ASS overlay must stay inside the repository root");
+    } finally {
+      await removePreflightFixture(fixture);
+    }
+  }, compositorPreflightTimeoutMs);
+
+  it("rejects an overlay beneath a linked in-repository parent directory before encoding", async () => {
+    const fixture = await createPreflightFixture();
+    const externalAssetDirectory = join(fixture.outsideDirectory, "external-assets");
+    try {
+      await rename(fixture.assetDirectory, externalAssetDirectory);
+      try {
+        await symlink(
+          externalAssetDirectory,
+          fixture.assetDirectory,
+          process.platform === "win32" ? "junction" : "dir",
+        );
       } catch (error) {
         if (error instanceof Error && "code" in error && error.code === "EPERM") return;
         throw error;
