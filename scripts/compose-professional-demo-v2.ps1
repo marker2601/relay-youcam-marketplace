@@ -117,6 +117,11 @@ function Test-CaptionOverlayCorrelation([string]$CaptionPath, [string]$OverlayPa
 }
 
 function Get-RepositoryRelativeSubtitlePath([string]$Path) {
+  $overlayItem = Get-Item -LiteralPath $Path -Force
+  $isReparsePoint = (($overlayItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
+  $linkTypeProperty = $overlayItem.PSObject.Properties['LinkType']
+  $isLink = $null -ne $linkTypeProperty -and -not [string]::IsNullOrWhiteSpace([string]$linkTypeProperty.Value)
+  if ($isReparsePoint -or $isLink) { throw 'ASS overlay must stay inside the repository root' }
   $absolutePath = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $Path).Path)
   $resolvedRepositoryRoot = [IO.Path]::GetFullPath($repositoryRoot)
   $separatorCharacters = [char[]]@([IO.Path]::DirectorySeparatorChar)

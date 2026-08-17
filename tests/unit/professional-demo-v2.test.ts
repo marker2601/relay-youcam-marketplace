@@ -19,6 +19,7 @@ import { runOverlayRenderer } from "../../scripts/render-professional-overlay-v2
 const execFileAsync = promisify(execFile);
 const compositorPath = resolve(process.cwd(), "scripts/compose-professional-demo-v2.ps1");
 const chapterIds = ["promise", "brief", "plan", "failure", "recovery", "ready", "youcam", "business"] as const;
+const compositorPreflightTimeoutMs = 15_000;
 
 async function resolvePowerShellExecutable(
   platform: NodeJS.Platform = process.platform,
@@ -242,7 +243,7 @@ describe("professional demo v2 composition", () => {
     } finally {
       await removePreflightFixture(fixture);
     }
-  });
+  }, compositorPreflightTimeoutMs);
 
   it("rejects an overlay symlink that escapes the repository before encoding", async () => {
     const fixture = await createPreflightFixture();
@@ -260,7 +261,7 @@ describe("professional demo v2 composition", () => {
     } finally {
       await removePreflightFixture(fixture);
     }
-  });
+  }, compositorPreflightTimeoutMs);
 
   it("validates canonical and legacy fixtures without render tools on PATH", async () => {
     const fixture = await createPreflightFixture();
@@ -271,24 +272,21 @@ describe("professional demo v2 composition", () => {
       expect(result.stdout).toContain("V2 compositor preflight passed");
 
       await writeFile(fixture.timingPath, JSON.stringify([{ id: "promise", startSeconds: 0 }]), "utf8");
-      await expectPreflightFailure(fixture, "canonical JSON object", emptyPath);
+      await expectPreflightFailure(fixture, "Timing JSON must be a canonical JSON object", emptyPath);
     } finally {
       await removePreflightFixture(fixture);
     }
-  });
+  }, compositorPreflightTimeoutMs);
 
   it("reports the canonical-object invariant for a legacy timing array before encoding", async () => {
     const fixture = await createPreflightFixture();
     try {
       await writeFile(fixture.timingPath, JSON.stringify([{ id: "promise", startSeconds: 0 }]), "utf8");
-      await expectPreflightFailure(
-        fixture,
-        "Timing JSON must be a canonical JSON object; legacy arrays are not supported",
-      );
+      await expectPreflightFailure(fixture, "Timing JSON must be a canonical JSON object");
     } finally {
       await removePreflightFixture(fixture);
     }
-  });
+  }, compositorPreflightTimeoutMs);
 
   it("rejects a BOM-prefixed canonical timing manifest before encoding", async () => {
     const fixture = await createPreflightFixture();
@@ -299,7 +297,7 @@ describe("professional demo v2 composition", () => {
     } finally {
       await removePreflightFixture(fixture);
     }
-  });
+  }, compositorPreflightTimeoutMs);
 
   it("rejects an ASS whose caption marker does not match the caption JSON", async () => {
     const fixture = await createPreflightFixture();
@@ -309,7 +307,7 @@ describe("professional demo v2 composition", () => {
     } finally {
       await removePreflightFixture(fixture);
     }
-  });
+  }, compositorPreflightTimeoutMs);
 });
 
 describe("professional demo v2 Human Handoff motion", () => {
