@@ -49,7 +49,12 @@ function Test-Utf8WithoutBom([string]$Path, [string]$Label) {
 
 function Get-CanonicalTimingManifest([string]$Path) {
   Test-Utf8WithoutBom -Path $Path -Label 'Timing JSON'
-  $timingValue = Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
+  $timingSource = Get-Content -Raw -LiteralPath $Path
+  $trimmedTimingSource = $timingSource.TrimStart()
+  if (-not $trimmedTimingSource.StartsWith('{') -or -not $trimmedTimingSource.TrimEnd().EndsWith('}')) {
+    throw 'Timing JSON must be a canonical JSON object; legacy arrays are not supported'
+  }
+  $timingValue = ConvertFrom-Json -InputObject $timingSource
   if ($timingValue -is [System.Array]) { throw 'Timing JSON must be a canonical JSON object; legacy arrays are not supported' }
   if ($timingValue -isnot [pscustomobject]) { throw 'Timing JSON must be a canonical JSON object' }
   if (-not $timingValue.PSObject.Properties['audioDurationSeconds']) { throw 'Timing JSON must include audioDurationSeconds' }
@@ -112,11 +117,21 @@ function Test-CaptionOverlayCorrelation([string]$CaptionPath, [string]$OverlayPa
 }
 
 function Get-RepositoryRelativeSubtitlePath([string]$Path) {
-  $absolutePath = (Resolve-Path -LiteralPath $Path).Path
-  $repositoryPrefix = $repositoryRoot.TrimEnd('\') + '\'
-  if (-not $absolutePath.StartsWith($repositoryPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'ASS overlay must stay inside the repository root' }
-  $relativePath = $absolutePath.Substring($repositoryPrefix.Length) -replace '\\', '/'
-  if (-not $relativePath -or $relativePath.StartsWith('../')) { throw 'ASS overlay path must be repository-relative' }
+  $absolutePath = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $Path).Path)
+  $resolvedRepositoryRoot = [IO.Path]::GetFullPath($repositoryRoot)
+  $separatorCharacters = [char[]]@([IO.Path]::DirectorySeparatorChar)
+  if ([IO.Path]::AltDirectorySeparatorChar -ne [IO.Path]::DirectorySeparatorChar) {
+    $separatorCharacters += [IO.Path]::AltDirectorySeparatorChar
+  }
+  $repositoryPrefix = $resolvedRepositoryRoot.TrimEnd([char[]]$separatorCharacters) + [IO.Path]::DirectorySeparatorChar
+  $pathComparison = if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
+    [StringComparison]::OrdinalIgnoreCase
+  } else {
+    [StringComparison]::Ordinal
+  }
+  if (-not $absolutePath.StartsWith($repositoryPrefix, $pathComparison)) { throw 'ASS overlay must stay inside the repository root' }
+  $relativePath = $absolutePath.Substring($repositoryPrefix.Length).Replace([string][IO.Path]::DirectorySeparatorChar, '/')
+  if (-not $relativePath -or $relativePath -match '(^|/)\.\.(/|$)') { throw 'ASS overlay path must be repository-relative' }
   return $relativePath
 }
 

@@ -244,6 +244,24 @@ describe("professional demo v2 composition", () => {
     }
   });
 
+  it("rejects an overlay symlink that escapes the repository before encoding", async () => {
+    const fixture = await createPreflightFixture();
+    const outsideOverlayPath = join(fixture.outsideDirectory, "escaped-overlay.ass");
+    try {
+      await writeFile(outsideOverlayPath, await readFile(fixture.overlayPath, "utf8"), "utf8");
+      await rm(fixture.overlayPath);
+      try {
+        await symlink(outsideOverlayPath, fixture.overlayPath, "file");
+      } catch (error) {
+        if (error instanceof Error && "code" in error && error.code === "EPERM") return;
+        throw error;
+      }
+      await expectPreflightFailure(fixture, "ASS overlay must stay inside the repository root");
+    } finally {
+      await removePreflightFixture(fixture);
+    }
+  });
+
   it("validates canonical and legacy fixtures without render tools on PATH", async () => {
     const fixture = await createPreflightFixture();
     const emptyPath = join(fixture.directory, "no-render-tools");
@@ -259,11 +277,14 @@ describe("professional demo v2 composition", () => {
     }
   });
 
-  it("rejects a legacy array timing manifest before encoding", async () => {
+  it("reports the canonical-object invariant for a legacy timing array before encoding", async () => {
     const fixture = await createPreflightFixture();
     try {
       await writeFile(fixture.timingPath, JSON.stringify([{ id: "promise", startSeconds: 0 }]), "utf8");
-      await expectPreflightFailure(fixture, "canonical JSON object");
+      await expectPreflightFailure(
+        fixture,
+        "Timing JSON must be a canonical JSON object; legacy arrays are not supported",
+      );
     } finally {
       await removePreflightFixture(fixture);
     }
