@@ -6,11 +6,22 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 
 - [x] Strict TypeScript: `npm.cmd run typecheck` exited 0.
 - [x] ESLint: `npm.cmd run lint` exited 0 with zero errors and three known negative-fixture unused-variable warnings.
-- [x] Full Vitest suite: 28 files and 259 tests passed.
+- [x] Full Vitest suite: 29 files and 280 tests passed.
 - [x] Next.js 16.3.1 production build compiled and generated all routes successfully.
 - [x] Full Playwright suite: 16/16 desktop/mobile/accessibility scenarios passed, including decline-to-backup recovery.
 - [x] Exact tracked-artifact and secret-pattern checks were inspected: only the intentionally tracked `.env.example` matched the artifact expression; assignment matches were safe placeholders or command documentation, with no production values.
 - [x] CI pins Node.js 20; repository dependencies require Node 20.19 or newer, which is compatible with the configured Node 20 runner.
+
+## Exact local v2 video-master verification
+
+- [x] Exact candidate `docs/submission/assets/relay-professional-demo-v2.mp4` verified: SHA-256 `BA1F60AE0C0B9CF13E5A228EDDB9E86560665773CAF5909E665E00064C857ABB`; 161.600000 seconds; 4,848 decoded frames.
+- [x] Master contract passed: H.264 `yuv420p`, 1920x1080 at 30 fps; AAC stereo at 48 kHz; `ftyp` -> `moov` -> `mdat`; full-frame decode.
+- [x] Audio passed: -16.0 LUFS integrated, -2.0 dBFS true peak, and no `silencedetect=noise=-45dB:d=1.2` interval.
+- [x] Visual continuity passed: no `blackdetect=d=0.2:pix_th=0.10` interval; sequential and independently-seeked raw-RGB frames matched at 12%, 35%, 60%, 84%, and 98%.
+- [x] Full local `ggml-base.en` ASR retained the binding product claims, $0/no-payments disclosures, limitations, and 18% commission hypothesis.
+- [x] All 36 caption midpoints and eight chapter cues were inspected: readable product proof, clear caption/control separation, approved character colors, and no visible credentials, task IDs, signed URLs, private keys, local paths, or unrelated browser content.
+- [x] Fresh repository verification: typecheck; lint (0 errors, 3 known fixture warnings); unit 203/203; single-worker integration 77/77; monolithic 280/280; build; and `git diff --check`.
+- [ ] Publish or attach the verified v2 master. This task intentionally made no upload, public-video, Devpost, or submission change.
 
 ## Relay Rescue behavior gate
 
