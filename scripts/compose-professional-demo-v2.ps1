@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-  [string]$AssetDirectory
+  [string]$AssetDirectory,
+  [switch]$ValidateOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -8,6 +9,7 @@ if (-not $AssetDirectory) {
   $AssetDirectory = Join-Path $PSScriptRoot '..\docs\submission\assets'
 }
 $culture = [System.Globalization.CultureInfo]::InvariantCulture
+$repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $assetRoot = (Resolve-Path -LiteralPath $AssetDirectory).Path
 $rawRoot = Join-Path $assetRoot 'professional-raw'
 $rawVideo = Join-Path $rawRoot 'relay-production-journey.webm'
@@ -44,26 +46,97 @@ function Test-FiniteDouble([double]$Value) {
   return -not ([double]::IsNaN($Value) -or [double]::IsInfinity($Value))
 }
 
-function Get-ChapterStarts([string]$Path, [double]$AudioDuration) {
+function Test-Utf8WithoutBom([string]$Path, [string]$Label) {
+  $bytes = [IO.File]::ReadAllBytes($Path)
+  if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+    throw "$Label must be UTF-8 without a BOM"
+  }
+}
+
+function Get-CanonicalTimingManifest([string]$Path) {
+  Test-Utf8WithoutBom -Path $Path -Label 'Timing JSON'
   $timingValue = Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
-  $chapters = if ($timingValue -is [System.Array]) { @($timingValue) } elseif ($timingValue.chapters) { @($timingValue.chapters) } else { @() }
-  if ($chapters.Count -ne 8) { throw "Expected eight timing chapters, found $($chapters.Count)" }
+  if ($timingValue -is [System.Array]) { throw 'Timing JSON must be a canonical JSON object; legacy arrays are not supported' }
+  if ($timingValue -isnot [pscustomobject]) { throw 'Timing JSON must be a canonical JSON object' }
+  if (-not $timingValue.PSObject.Properties['audioDurationSeconds']) { throw 'Timing JSON must include audioDurationSeconds' }
+  if (-not $timingValue.PSObject.Properties['chapterStarts']) { throw 'Timing JSON must include chapterStarts' }
+  if (-not $timingValue.PSObject.Properties['chapters']) { throw 'Timing JSON must include chapters' }
+  $declaredDuration = [double]$timingValue.audioDurationSeconds
+  if (-not (Test-FiniteDouble $declaredDuration) -or $declaredDuration -le 0) { throw 'Timing JSON audioDurationSeconds must be positive and finite' }
+
+  $chapterIds = @('promise', 'brief', 'plan', 'failure', 'recovery', 'ready', 'youcam', 'business')
+  if ($timingValue.chapterStarts -isnot [pscustomobject]) { throw 'Timing JSON chapterStarts must be an object' }
+  $startNames = @($timingValue.chapterStarts.PSObject.Properties.Name)
+  if (($startNames -join ',') -cne ($chapterIds -join ',')) { throw 'Timing JSON chapterStarts must contain the eight canonical chapter ids in order' }
+  $chapters = @($timingValue.chapters)
+  if ($chapters.Count -ne $chapterIds.Count) { throw "Timing JSON must contain eight chapters, found $($chapters.Count)" }
+
   $starts = [System.Collections.Generic.List[double]]::new()
-  foreach ($chapter in $chapters) {
+  for ($index = 0; $index -lt $chapterIds.Count; $index++) {
+    $id = $chapterIds[$index]
+    $chapter = $chapters[$index]
+    if ($chapter -isnot [pscustomobject] -or $chapter.id -cne $id) { throw "Timing JSON chapter $($index + 1) must be '$id'" }
+    if (-not $chapter.PSObject.Properties['startSeconds'] -or -not $chapter.PSObject.Properties['durationSeconds']) { throw "Timing JSON chapter '$id' is missing timing fields" }
     $start = [double]$chapter.startSeconds
-    if (-not (Test-FiniteDouble $start) -or $start -lt 0) { throw 'Timing JSON contains an invalid chapter start' }
+    $declaredStart = [double]$timingValue.chapterStarts.$id
+    $chapterDuration = [double]$chapter.durationSeconds
+    if (-not (Test-FiniteDouble $start) -or -not (Test-FiniteDouble $declaredStart) -or $start -lt 0 -or $declaredStart -lt 0) { throw "Timing JSON chapter '$id' contains an invalid start" }
+    if (-not (Test-FiniteDouble $chapterDuration) -or $chapterDuration -le 0) { throw "Timing JSON chapter '$id' contains an invalid duration" }
+    if ([math]::Abs($start - $declaredStart) -gt 0.001) { throw "Timing JSON chapter '$id' disagrees with chapterStarts" }
+    if (($start + $chapterDuration) -gt ($declaredDuration + 0.001)) { throw "Timing JSON chapter '$id' exceeds audioDurationSeconds" }
     $starts.Add($start)
   }
   if ($starts[0] -ne 0) { throw 'The first narration chapter must start at zero' }
   for ($index = 1; $index -lt $starts.Count; $index++) {
     if ($starts[$index] -le $starts[$index - 1]) { throw 'Narration chapter starts must be strictly increasing' }
   }
-  if ($starts[$starts.Count - 1] -ge $AudioDuration) { throw 'The final narration chapter must start before narration ends' }
-  return $starts
+  if ($starts[$starts.Count - 1] -ge $declaredDuration) { throw 'The final narration chapter must start before audioDurationSeconds' }
+  return [pscustomobject]@{ audioDurationSeconds = $declaredDuration; chapterStarts = $starts }
+}
+
+function Test-CaptionOverlayCorrelation([string]$CaptionPath, [string]$OverlayPath, [double]$AudioDuration) {
+  Test-Utf8WithoutBom -Path $CaptionPath -Label 'Caption JSON'
+  $captionSource = Get-Content -Raw -LiteralPath $CaptionPath
+  if (-not $captionSource.TrimStart().StartsWith('[')) { throw 'Caption JSON must be an array' }
+  $captions = @((ConvertFrom-Json -InputObject $captionSource) | ForEach-Object { $_ })
+  for ($index = 0; $index -lt $captions.Count; $index++) {
+    $caption = $captions[$index]
+    if ($caption -isnot [pscustomobject] -or -not $caption.PSObject.Properties['startSeconds'] -or -not $caption.PSObject.Properties['endSeconds'] -or -not $caption.PSObject.Properties['text']) { throw "Caption $($index + 1) is malformed" }
+    $start = [double]$caption.startSeconds
+    $end = [double]$caption.endSeconds
+    if (-not (Test-FiniteDouble $start) -or -not (Test-FiniteDouble $end) -or $start -lt 0 -or $end -le $start -or $end -gt $AudioDuration -or [string]::IsNullOrWhiteSpace([string]$caption.text)) { throw "Caption $($index + 1) is malformed" }
+  }
+  $overlay = Get-Content -Raw -LiteralPath $OverlayPath
+  $countMatch = [regex]::Match($overlay, '(?m)^; relay-caption-count=([0-9]+)\r?$')
+  $hashMatch = [regex]::Match($overlay, '(?m)^; relay-caption-sha256=([a-fA-F0-9]{64})\r?$')
+  if (-not $countMatch.Success -or -not $hashMatch.Success) { throw 'ASS overlay is missing its caption correlation marker' }
+  if ([int]$countMatch.Groups[1].Value -ne $captions.Count) { throw 'ASS caption marker count does not match caption JSON' }
+  $captionHash = (Get-FileHash -LiteralPath $CaptionPath -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($hashMatch.Groups[1].Value.ToLowerInvariant() -ne $captionHash) { throw 'ASS caption marker hash does not match caption JSON' }
+  $dialogueCount = [regex]::Matches($overlay, '(?m)^Dialogue:\s*10,[^,\r\n]+,[^,\r\n]+,Caption,caption-[0-9]+,').Count
+  if ($dialogueCount -ne $captions.Count) { throw 'ASS caption dialogue count does not match caption JSON' }
+}
+
+function Get-RepositoryRelativeSubtitlePath([string]$Path) {
+  $absolutePath = (Resolve-Path -LiteralPath $Path).Path
+  $repositoryPrefix = $repositoryRoot.TrimEnd('\') + '\'
+  if (-not $absolutePath.StartsWith($repositoryPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'ASS overlay must stay inside the repository root' }
+  $relativePath = $absolutePath.Substring($repositoryPrefix.Length) -replace '\\', '/'
+  if (-not $relativePath -or $relativePath.StartsWith('../')) { throw 'ASS overlay path must be repository-relative' }
+  return $relativePath
+}
+
+$timingManifest = Get-CanonicalTimingManifest -Path $timingPath
+Test-CaptionOverlayCorrelation -CaptionPath $captionPath -OverlayPath $overlayPath -AudioDuration $timingManifest.audioDurationSeconds
+$subtitlePath = Get-RepositoryRelativeSubtitlePath -Path $overlayPath
+if ($ValidateOnly) {
+  Write-Output "V2 compositor preflight passed: $subtitlePath"
+  return
 }
 
 $audioDuration = Get-ProbeDuration $narrationPath
-$chapterStarts = Get-ChapterStarts -Path $timingPath -AudioDuration $audioDuration
+if ([math]::Abs($audioDuration - $timingManifest.audioDurationSeconds) -gt 0.1) { throw 'Narration WAV duration does not match timing JSON audioDurationSeconds' }
+$chapterStarts = $timingManifest.chapterStarts
 $capture = Get-Content -Raw -LiteralPath $captureManifestPath | ConvertFrom-Json
 $sceneByName = @{}
 foreach ($scene in $capture.scenes) { $sceneByName[$scene.name] = $scene }
@@ -102,7 +175,6 @@ $concatInputs = (0..7 | ForEach-Object { "[v$_]" }) -join ''
 $filterParts.Add("${concatInputs}concat=n=8:v=1:a=0[base]")
 $durationFilter = $audioDuration.ToString('0.######', $culture)
 $filterParts.Add("[base]tpad=stop_mode=clone:stop_duration=0.2,trim=duration=$durationFilter[filled]")
-$subtitlePath = ($overlayPath.Substring((Get-Location).Path.Length + 1) -replace '\\', '/')
 $filterParts.Add("[filled]subtitles='$subtitlePath'[video]")
 $filterComplex = $filterParts -join ';'
 
@@ -128,8 +200,14 @@ $arguments = @(
   $outputPath
 )
 
-& $ffmpeg @arguments
-if ($LASTEXITCODE -ne 0) { throw "ffmpeg exited with code $LASTEXITCODE" }
+Push-Location -LiteralPath $repositoryRoot
+try {
+  & $ffmpeg @arguments
+  $ffmpegExitCode = $LASTEXITCODE
+} finally {
+  Pop-Location
+}
+if ($ffmpegExitCode -ne 0) { throw "ffmpeg exited with code $ffmpegExitCode" }
 
 & $ffprobe -v error -show_entries 'format=duration,size' -show_entries 'stream=codec_type,codec_name,width,height,pix_fmt,r_frame_rate,sample_rate,channels' -of json $outputPath
 if ($LASTEXITCODE -ne 0) { throw "ffprobe could not read '$outputPath'" }

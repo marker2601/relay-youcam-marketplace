@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
-import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import {
   buildHumanHandoffAss,
@@ -12,6 +15,91 @@ import {
   VOICE_SAMPLE_SEGMENTS,
 } from "../../scripts/video/professional-demo-v2";
 import { runOverlayRenderer } from "../../scripts/render-professional-overlay-v2";
+
+const execFileAsync = promisify(execFile);
+const compositorPath = resolve(process.cwd(), "scripts/compose-professional-demo-v2.ps1");
+const chapterIds = ["promise", "brief", "plan", "failure", "recovery", "ready", "youcam", "business"] as const;
+
+type PreflightFixture = Readonly<{
+  directory: string;
+  outsideDirectory: string;
+  assetDirectory: string;
+  timingPath: string;
+  captionPath: string;
+  overlayPath: string;
+}>;
+
+async function createPreflightFixture(): Promise<PreflightFixture> {
+  const directory = await mkdtemp(join(process.cwd(), ".relay-v2-compositor-"));
+  const outsideDirectory = await mkdtemp(join(tmpdir(), "relay-v2-compositor-cwd-"));
+  const assetDirectory = join(directory, "assets");
+  const rawDirectory = join(assetDirectory, "professional-raw");
+  await mkdir(rawDirectory, { recursive: true });
+
+  const chapterStarts = Object.fromEntries(chapterIds.map((id, index) => [id, index * 10]));
+  const timings = JSON.stringify({
+    audioDurationSeconds: 80,
+    chapterStarts,
+    chapters: chapterIds.map((id, index) => ({ id, startSeconds: index * 10, durationSeconds: 9 })),
+  });
+  const captions = JSON.stringify([{ startSeconds: 1, endSeconds: 2, text: "A verified caption." }]);
+  const captionHash = createHash("sha256").update(captions, "utf8").digest("hex");
+  const overlay = [
+    "[Script Info]",
+    "; relay-caption-count=1",
+    `; relay-caption-sha256=${captionHash}`,
+    "",
+    "[Events]",
+    "Dialogue: 10,0:00:01.00,0:00:02.00,Caption,caption-1,0,0,0,,A verified caption.",
+  ].join("\r\n");
+
+  await Promise.all([
+    writeFile(join(rawDirectory, "relay-production-journey.webm"), "placeholder", "utf8"),
+    writeFile(join(rawDirectory, "relay-production-journey.json"), JSON.stringify({ scenes: [] }), "utf8"),
+    writeFile(join(assetDirectory, "relay-professional-narration-v2.wav"), "placeholder", "utf8"),
+    writeFile(join(assetDirectory, "relay-professional-timings-v2.json"), timings, "utf8"),
+    writeFile(join(assetDirectory, "relay-professional-captions-v2.json"), captions, "utf8"),
+    writeFile(join(assetDirectory, "relay-professional-overlay-v2.ass"), overlay, "utf8"),
+  ]);
+
+  return Object.freeze({
+    directory,
+    outsideDirectory,
+    assetDirectory,
+    timingPath: join(assetDirectory, "relay-professional-timings-v2.json"),
+    captionPath: join(assetDirectory, "relay-professional-captions-v2.json"),
+    overlayPath: join(assetDirectory, "relay-professional-overlay-v2.ass"),
+  });
+}
+
+async function runCompositorPreflight(fixture: PreflightFixture): Promise<{ stdout: string; stderr: string }> {
+  return execFileAsync("powershell.exe", [
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-File", compositorPath,
+    "-AssetDirectory", fixture.assetDirectory,
+    "-ValidateOnly",
+  ], { cwd: fixture.outsideDirectory, windowsHide: true });
+}
+
+async function removePreflightFixture(fixture: PreflightFixture): Promise<void> {
+  await Promise.all([
+    rm(fixture.directory, { recursive: true, force: true }),
+    rm(fixture.outsideDirectory, { recursive: true, force: true }),
+  ]);
+}
+
+async function expectPreflightFailure(fixture: PreflightFixture, message: string): Promise<void> {
+  try {
+    await runCompositorPreflight(fixture);
+    throw new Error("Expected compositor preflight to fail.");
+  } catch (error) {
+    const details = error instanceof Error && "stderr" in error
+      ? `${error.message}\n${String(error.stderr)}`
+      : String(error);
+    expect(details).toContain(message);
+  }
+}
 
 describe("professional demo v2 narration", () => {
   it("uses the approved friendly female neural profile", () => {
@@ -78,6 +166,48 @@ describe("professional demo v2 composition", () => {
     expect(source).toContain("$AssetDirectory = Join-Path $PSScriptRoot");
     expect(source).toContain("[double]::IsNaN");
     expect(source).toContain("[double]::IsInfinity");
+  });
+
+  it("preflights canonical BOM-free inputs from outside the repository cwd", async () => {
+    const fixture = await createPreflightFixture();
+    try {
+      const result = await runCompositorPreflight(fixture);
+      expect(result.stdout).toContain("V2 compositor preflight passed");
+      expect(result.stdout).toContain(fixture.overlayPath.slice(process.cwd().length + 1).replaceAll("\\", "/"));
+    } finally {
+      await removePreflightFixture(fixture);
+    }
+  });
+
+  it("rejects a legacy array timing manifest before encoding", async () => {
+    const fixture = await createPreflightFixture();
+    try {
+      await writeFile(fixture.timingPath, JSON.stringify([{ id: "promise", startSeconds: 0 }]), "utf8");
+      await expectPreflightFailure(fixture, "canonical JSON object");
+    } finally {
+      await removePreflightFixture(fixture);
+    }
+  });
+
+  it("rejects a BOM-prefixed canonical timing manifest before encoding", async () => {
+    const fixture = await createPreflightFixture();
+    try {
+      const canonicalJson = await readFile(fixture.timingPath, "utf8");
+      await writeFile(fixture.timingPath, `\uFEFF${canonicalJson}`, "utf8");
+      await expectPreflightFailure(fixture, "must be UTF-8 without a BOM");
+    } finally {
+      await removePreflightFixture(fixture);
+    }
+  });
+
+  it("rejects an ASS whose caption marker does not match the caption JSON", async () => {
+    const fixture = await createPreflightFixture();
+    try {
+      await writeFile(fixture.captionPath, JSON.stringify([{ startSeconds: 1, endSeconds: 2, text: "A stale caption." }]), "utf8");
+      await expectPreflightFailure(fixture, "caption marker hash does not match");
+    } finally {
+      await removePreflightFixture(fixture);
+    }
   });
 });
 
@@ -200,6 +330,8 @@ describe("professional demo v2 Human Handoff motion", () => {
       const ass = await readFile(outputPath, "utf8");
       for (const cue of HUMAN_HANDOFF_CUES) expect(ass).toContain(`,${cue.id},`);
       expect(ass).toContain("Dialogue: 10,0:00:01.00,0:00:02.50,Caption,caption-1");
+      expect(ass).toContain("; relay-caption-count=1");
+      expect(ass).toContain(`; relay-caption-sha256=${createHash("sha256").update(await readFile(captionPath, "utf8"), "utf8").digest("hex")}`);
     } finally {
       await rm(fixtureDirectory, { recursive: true, force: true });
     }

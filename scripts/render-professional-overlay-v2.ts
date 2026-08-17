@@ -1,6 +1,7 @@
 import { lstat, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 import {
   buildHumanHandoffAss,
   type CaptionCue,
@@ -97,20 +98,37 @@ function assertCaptions(value: unknown): readonly CaptionCue[] {
   });
 }
 
+function parseBomFreeJson(source: string, label: string): unknown {
+  if (source.charCodeAt(0) === 0xFEFF) {
+    throw new Error(`${label} must be UTF-8 without a BOM.`);
+  }
+  return JSON.parse(source);
+}
+
+function addCaptionMarker(ass: string, captionSource: string, captionCount: number): string {
+  const captionHash = createHash("sha256").update(captionSource, "utf8").digest("hex");
+  const header = "[Script Info]\r\n";
+  if (!ass.startsWith(header)) throw new Error("Rendered ASS is missing its script-info header.");
+  return `${header}; relay-caption-count=${captionCount}\r\n; relay-caption-sha256=${captionHash}\r\n${ass.slice(header.length)}`;
+}
+
 export async function runOverlayRenderer(paths: OverlayRendererPaths): Promise<void> {
   const repositoryRoot = await realpath(resolve(paths.repositoryRoot ?? process.cwd()));
   const timingPath = await resolveRepositoryPath(paths.timingPath, repositoryRoot, "input");
   const captionPath = await resolveRepositoryPath(paths.captionPath, repositoryRoot, "input");
   const outputPath = await resolveRepositoryPath(paths.outputPath, repositoryRoot, "output");
 
-  const timings = assertTimingManifest(JSON.parse(await readFile(timingPath, "utf8")));
-  const captions = assertCaptions(JSON.parse(await readFile(captionPath, "utf8")));
+  const timingSource = await readFile(timingPath, "utf8");
+  const captionSource = await readFile(captionPath, "utf8");
+  const timings = assertTimingManifest(parseBomFreeJson(timingSource, "Timing JSON"));
+  const captions = assertCaptions(parseBomFreeJson(captionSource, "Caption JSON"));
   validateMotionCues(timings.audioDurationSeconds);
-  await writeFile(outputPath, buildHumanHandoffAss({
+  const ass = buildHumanHandoffAss({
     durationSeconds: timings.audioDurationSeconds,
     chapterStarts: timings.chapterStarts,
     captions,
-  }), "utf8");
+  });
+  await writeFile(outputPath, addCaptionMarker(ass, captionSource, captions.length), "utf8");
 }
 
 function parseCliArguments(arguments_: readonly string[]): OverlayRendererPaths {
