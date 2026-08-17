@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { constants, readFileSync } from "node:fs";
+import { access, chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { delimiter, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -19,6 +19,27 @@ import { runOverlayRenderer } from "../../scripts/render-professional-overlay-v2
 const execFileAsync = promisify(execFile);
 const compositorPath = resolve(process.cwd(), "scripts/compose-professional-demo-v2.ps1");
 const chapterIds = ["promise", "brief", "plan", "failure", "recovery", "ready", "youcam", "business"] as const;
+
+async function resolvePowerShellExecutable(
+  platform: NodeJS.Platform = process.platform,
+  searchDirectories: readonly string[] = (process.env.PATH ?? "").split(delimiter),
+): Promise<string> {
+  const executableNames = platform === "win32"
+    ? ["pwsh.exe", "powershell.exe"]
+    : ["pwsh", "powershell"];
+  for (const directory of searchDirectories.map((entry) => entry.trim()).filter(Boolean)) {
+    for (const executableName of executableNames) {
+      const executablePath = join(directory.replace(/^"|"$/g, ""), executableName);
+      try {
+        await access(executablePath, constants.X_OK);
+        return executablePath;
+      } catch {
+        // Keep searching the remaining PATH entries.
+      }
+    }
+  }
+  throw new Error(`PowerShell executable not found on PATH (tried ${executableNames.join(", ")})`);
+}
 
 type PreflightFixture = Readonly<{
   directory: string;
@@ -73,7 +94,8 @@ async function createPreflightFixture(): Promise<PreflightFixture> {
 }
 
 async function runCompositorPreflight(fixture: PreflightFixture): Promise<{ stdout: string; stderr: string }> {
-  return execFileAsync("powershell.exe", [
+  const powershellExecutable = await resolvePowerShellExecutable();
+  return execFileAsync(powershellExecutable, [
     "-NoProfile",
     "-ExecutionPolicy", "Bypass",
     "-File", compositorPath,
@@ -170,6 +192,19 @@ describe("professional demo v2 narration", () => {
 });
 
 describe("professional demo v2 composition", () => {
+  it("resolves pwsh from a Linux PATH without requiring powershell.exe", async () => {
+    const executableDirectory = await mkdtemp(join(tmpdir(), "relay-pwsh-path-"));
+    const pwshPath = join(executableDirectory, "pwsh");
+    try {
+      await writeFile(pwshPath, "#!/bin/sh\nexit 0\n", "utf8");
+      await chmod(pwshPath, 0o755);
+
+      await expect(resolvePowerShellExecutable("linux", [executableDirectory])).resolves.toBe(pwshPath);
+    } finally {
+      await rm(executableDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("renders v2 beside the current master", async () => {
     const source = await readFile("scripts/compose-professional-demo-v2.ps1", "utf8");
     expect(source).toContain("relay-professional-demo-v2.mp4");
