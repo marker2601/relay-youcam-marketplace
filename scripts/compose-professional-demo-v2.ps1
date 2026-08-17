@@ -19,6 +19,8 @@ $timingPath = Join-Path $assetRoot 'relay-professional-timings-v2.json'
 $captionPath = Join-Path $assetRoot 'relay-professional-captions-v2.json'
 $overlayPath = Join-Path $assetRoot 'relay-professional-overlay-v2.ass'
 $outputPath = Join-Path $assetRoot 'relay-professional-demo-v2.mp4'
+$finalNormalizationFilter = 'loudnorm=I=-16:TP=-2.0:LRA=11'
+$finalOutputTruePeakLimitDbfs = -1.5
 
 foreach ($required in @($rawVideo, $captureManifestPath, $narrationPath, $timingPath, $captionPath, $overlayPath)) {
   if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
@@ -194,7 +196,7 @@ $arguments = @(
   '-b:a', '192k',
   '-ar', '48000',
   '-ac', '2',
-  '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11',
+  '-af', $finalNormalizationFilter,
   '-movflags', '+faststart',
   '-t', $durationFilter,
   $outputPath
@@ -208,6 +210,23 @@ try {
   Pop-Location
 }
 if ($ffmpegExitCode -ne 0) { throw "ffmpeg exited with code $ffmpegExitCode" }
+
+$savedErrorActionPreference = $ErrorActionPreference
+try {
+  $ErrorActionPreference = 'Continue'
+  $ebur128Output = & $ffmpeg -hide_banner -i $outputPath -filter:a 'ebur128=peak=true' -f null NUL 2>&1
+  $ebur128ExitCode = $LASTEXITCODE
+} finally {
+  $ErrorActionPreference = $savedErrorActionPreference
+}
+if ($ebur128ExitCode -ne 0) { throw "ffmpeg could not measure final audio true peak for '$outputPath'" }
+$truePeakMatch = [regex]::Match(($ebur128Output -join "`n"), 'True peak:\s*\r?\n\s*Peak:\s*(-?[0-9]+(?:\.[0-9]+)?)\s*dBFS')
+if (-not $truePeakMatch -or -not $truePeakMatch.Success) { throw "ffmpeg ebur128=peak=true did not report a final audio true peak for '$outputPath'" }
+$finalOutputTruePeakDbfs = [double]::Parse($truePeakMatch.Groups[1].Value, $culture)
+if (-not (Test-FiniteDouble $finalOutputTruePeakDbfs) -or $finalOutputTruePeakDbfs -gt $finalOutputTruePeakLimitDbfs) {
+  throw "Final audio true peak $finalOutputTruePeakDbfs dBFS exceeds the binding $finalOutputTruePeakLimitDbfs dBFS limit"
+}
+Write-Output "Final audio true peak passed: $finalOutputTruePeakDbfs dBFS"
 
 & $ffprobe -v error -show_entries 'format=duration,size' -show_entries 'stream=codec_type,codec_name,width,height,pix_fmt,r_frame_rate,sample_rate,channels' -of json $outputPath
 if ($LASTEXITCODE -ne 0) { throw "ffprobe could not read '$outputPath'" }

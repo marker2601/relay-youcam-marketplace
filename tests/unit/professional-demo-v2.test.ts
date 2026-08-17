@@ -175,7 +175,11 @@ describe("professional demo v2 composition", () => {
     expect(source).toContain("relay-professional-demo-v2.mp4");
     expect(source).not.toMatch(/Remove-Item.+relay-professional-demo\.mp4/);
     expect(source).toContain("subtitles=");
-    expect(source).toContain("loudnorm=I=-16:TP=-1.5:LRA=11");
+    expect(source).toContain("$finalNormalizationFilter = 'loudnorm=I=-16:TP=-2.0:LRA=11'");
+    expect(source).toContain("$finalOutputTruePeakLimitDbfs = -1.5");
+    expect(source).toContain("ebur128=peak=true");
+    expect(source).toContain("True peak:\\s*\\r?\\n\\s*Peak:");
+    expect(source).toContain("$savedErrorActionPreference = $ErrorActionPreference");
     expect(source).toContain("+faststart");
     expect(source).toContain("$AssetDirectory = Join-Path $PSScriptRoot");
     expect(source).toContain("[double]::IsNaN");
