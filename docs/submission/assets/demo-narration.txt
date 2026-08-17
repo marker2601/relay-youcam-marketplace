@@ -8,7 +8,7 @@ The shopper requests the primary. Relay preserves the backup and sets a response
 
 The original timeline now says Backup available. The navy look is already rendered and belongs to an independent provider. One authorized, idempotent action activates it with no new search, upload, or YouCam generation.
 
-The backup provider reviews the new request and accepts. The shopper's timeline advances to Event ready. In this prototype, that means provider-confirmed reservation intent. No payment has been collected, and delivery and physical fit are not guaranteed. Availability and transaction completion are not guaranteed.
+The backup provider reviews the new request and accepts. The shopper's timeline advances to Event ready. In this prototype, that means provider-confirmed reservation intent. This prototype collects zero dollars. It does not process payments. Delivery and physical fit are not guaranteed. Availability and transaction completion are not guaranteed.
 
 Under the hood, Relay registers shopper and garment files, follows YouCam's signed upload instructions, creates each Clothes version three task, polls with bounded retries, and copies successful results into private storage. One preview can fail without blocking the rest. Server-side transactions, deadlines, and idempotency make the recovery path dependable.
 

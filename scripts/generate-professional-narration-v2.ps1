@@ -122,6 +122,7 @@ if ($paragraphs.Count -ne 8 -or @($paragraphs | Where-Object { -not $_ }).Count 
 }
 
 $chapterIds = @('promise', 'brief', 'plan', 'failure', 'recovery', 'ready', 'youcam', 'business')
+$chapterPauseSeconds = 0.12
 $workingDirectory = Join-Path ([IO.Path]::GetTempPath()) ("relay-professional-v2-" + [guid]::NewGuid())
 New-Item -ItemType Directory -Path $workingDirectory | Out-Null
 try {
@@ -136,15 +137,22 @@ try {
     $chapterWav = Join-Path $workingDirectory ("chapter-{0:D2}.wav" -f $index)
     & uvx --from 'edge-tts==7.2.8' edge-tts --voice 'en-US-JennyNeural' --rate=-3% --pitch=-2Hz --volume=-3% --text $paragraphs[$index] --write-media $chapterMp3 --write-subtitles $chapterSrt
     if ($LASTEXITCODE -ne 0) { throw "Narration synthesis failed for chapter $($chapterIds[$index])." }
-    $duration = Get-AudioDuration $chapterMp3
-    $captions += Get-SrtCues -Path $chapterSrt -Offset $offset
+    $chapterCaptions = Get-SrtCues -Path $chapterSrt -Offset $offset
     $chapterStart = [Math]::Round($offset, 3)
     $chapterStarts[$chapterIds[$index]] = $chapterStart
-    $timings += [ordered]@{ id = $chapterIds[$index]; startSeconds = $chapterStart; durationSeconds = [Math]::Round($duration, 3); wordCount = @($paragraphs[$index] -split '\s+').Count }
-    & ffmpeg -y -v error -i $chapterMp3 -f lavfi -t 0.18 -i 'anullsrc=channel_layout=stereo:sample_rate=48000' -filter_complex '[0:a]aresample=48000,aformat=channel_layouts=stereo[a];[a][1:a]concat=n=2:v=0:a=1' -ar 48000 -ac 2 -c:a pcm_s16le $chapterWav
+    & ffmpeg -y -v error -i $chapterMp3 -f lavfi -t $chapterPauseSeconds -i 'anullsrc=channel_layout=stereo:sample_rate=48000' -filter_complex '[0:a]aresample=48000,aformat=channel_layouts=stereo,areverse,silenceremove=start_periods=1:start_duration=0.10:start_threshold=-45dB:start_silence=0,areverse[trimmed];[trimmed][1:a]concat=n=2:v=0:a=1' -ar 48000 -ac 2 -c:a pcm_s16le $chapterWav
     if ($LASTEXITCODE -ne 0) { throw "Could not prepare chapter $($chapterIds[$index]) for concatenation." }
+    $preparedDuration = Get-AudioDuration $chapterWav
+    $spokenDuration = [math]::Max(0, $preparedDuration - $chapterPauseSeconds)
+    $chapterEnd = $chapterStart + $spokenDuration
+    foreach ($caption in $chapterCaptions) {
+      $caption.endSeconds = [Math]::Round([Math]::Min($caption.endSeconds, $chapterEnd), 3)
+      if ($caption.endSeconds -le $caption.startSeconds) { throw "Caption for chapter $($chapterIds[$index]) was removed by tail trimming." }
+    }
+    $captions += $chapterCaptions
+    $timings += [ordered]@{ id = $chapterIds[$index]; startSeconds = $chapterStart; durationSeconds = [Math]::Round($spokenDuration, 3); wordCount = @($paragraphs[$index] -split '\s+').Count }
     $concatLines += "file '$($chapterWav.Replace("'", "'\\''"))'"
-    $offset += $duration + 0.18
+    $offset += $preparedDuration
   }
   $concatFile = Join-Path $workingDirectory 'chapters.ffconcat'
   [IO.File]::WriteAllLines($concatFile, $concatLines, [Text.UTF8Encoding]::new($false))

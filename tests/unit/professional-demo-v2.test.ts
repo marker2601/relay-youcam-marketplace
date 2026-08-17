@@ -113,11 +113,12 @@ describe("professional demo v2 narration", () => {
     });
   });
 
-  it("locks eight non-empty narration chapters and required disclosures", () => {
+  it("locks eight non-empty narration chapters and unambiguous required disclosures", () => {
     expect(NARRATION_CHAPTERS).toHaveLength(8);
     const script = NARRATION_CHAPTERS.map((chapter) => chapter.text).join(" ");
-    expect(script).toContain("No payment has been collected");
-    expect(script).toContain("physical fit are not guaranteed");
+    expect(script).toContain("This prototype collects zero dollars. It does not process payments.");
+    expect(script).not.toContain("No payment has been collected");
+    expect(script).toContain("Delivery and physical fit are not guaranteed");
     expect(script).toContain("Availability and transaction completion are not guaranteed");
     expect(script).toContain("YouCam");
     expect(script).toContain("Event ready");
@@ -139,6 +140,19 @@ describe("professional demo v2 narration", () => {
 
     expect(generator).toContain("loudnorm=I=-16:TP=-1.5:LRA=11");
     expect(generator).toContain("relay-professional-narration-v2-loudness.json");
+  });
+
+  it("trims chapter-tail silence before adding a deterministic natural pause", () => {
+    const generator = readFileSync(
+      resolve(process.cwd(), "scripts/generate-professional-narration-v2.ps1"),
+      "utf8",
+    );
+
+    expect(generator).toContain("$chapterPauseSeconds = 0.12");
+    expect(generator).toContain("areverse,silenceremove=start_periods=1:start_duration=0.10:start_threshold=-45dB:start_silence=0,areverse");
+    expect(generator).toContain("$preparedDuration = Get-AudioDuration $chapterWav");
+    expect(generator).toContain("$caption.endSeconds = [Math]::Round([Math]::Min($caption.endSeconds, $chapterEnd), 3)");
+    expect(generator).toContain("$offset += $preparedDuration");
   });
 
   it("writes the Task 2 timing contract as BOM-free canonical JSON", () => {
