@@ -1,6 +1,6 @@
 # Relay Devpost submission worksheet
 
-The project and submission draft are live at https://devpost.com/software/relay-xr7byl. The final irreversible submission has not been made.
+The project and submitted hackathon entry are live at https://devpost.com/software/relay-xr7byl. Devpost recorded submission at `2026-08-17T00:55:13.712-04:00`.
 
 ## Core project fields
 
@@ -61,4 +61,5 @@ The hardest wall was safe recovery across asynchronous image work and concurrent
 - [x] Supply submitter type and country of residence.
 - [x] Confirm repository visibility or judge access.
 - [x] Confirm the deployed commit passes production smoke and one real YouCam path.
-- [ ] Obtain the user's final explicit `yes, submit` immediately before submission.
+- [x] Obtain the user's final explicit submission authorization immediately before submission.
+- [x] Submit to the YouCam API hackathon and read back a non-null `submitted_at` timestamp.
