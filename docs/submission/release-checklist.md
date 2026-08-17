@@ -6,11 +6,22 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 
 - [x] Strict TypeScript: `npm.cmd run typecheck` exited 0.
 - [x] ESLint: `npm.cmd run lint` exited 0 with zero errors and three known negative-fixture unused-variable warnings.
-- [x] Full Vitest suite: 28 files and 259 tests passed.
+- [x] Full Vitest suite: 29 files and 280 tests passed.
 - [x] Next.js 16.3.1 production build compiled and generated all routes successfully.
 - [x] Full Playwright suite: 16/16 desktop/mobile/accessibility scenarios passed, including decline-to-backup recovery.
 - [x] Exact tracked-artifact and secret-pattern checks were inspected: only the intentionally tracked `.env.example` matched the artifact expression; assignment matches were safe placeholders or command documentation, with no production values.
 - [x] CI pins Node.js 20; repository dependencies require Node 20.19 or newer, which is compatible with the configured Node 20 runner.
+
+## Exact local v2 video-master verification
+
+- [x] Exact candidate `docs/submission/assets/relay-professional-demo-v2.mp4` verified: SHA-256 `BA1F60AE0C0B9CF13E5A228EDDB9E86560665773CAF5909E665E00064C857ABB`; 161.600000 seconds; 4,848 decoded frames.
+- [x] Master contract passed: H.264 `yuv420p`, 1920x1080 at 30 fps; AAC stereo at 48 kHz; `ftyp` -> `moov` -> `mdat`; full-frame decode.
+- [x] Audio passed: -16.0 LUFS integrated, -2.0 dBFS true peak, and no `silencedetect=noise=-45dB:d=1.2` interval.
+- [x] Visual continuity passed: no `blackdetect=d=0.2:pix_th=0.10` interval; sequential and independently-seeked raw-RGB frames matched at 12%, 35%, 60%, 84%, and 98%.
+- [x] Full local `ggml-base.en` ASR retained the binding product claims, $0/no-payments disclosures, limitations, and 18% commission hypothesis.
+- [x] All 36 caption midpoints and eight chapter cues were inspected: readable product proof, clear caption/control separation, approved character colors, and no visible credentials, task IDs, signed URLs, private keys, local paths, or unrelated browser content.
+- [x] Fresh repository verification: typecheck; lint (0 errors, 3 known fixture warnings); unit 203/203; single-worker integration 77/77; monolithic 280/280; build; and `git diff --check`.
+- [x] Published and attached the verified v2 master: https://youtu.be/0hUbCwDbn4I. YouTube displays 2:42; the exact local master is 161.600000 seconds. Studio copyright checks completed with no issues, and Devpost readback returned this URL while `submitted_at` remained null.
 
 ## Relay Rescue behavior gate
 
@@ -47,8 +58,8 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 - [x] Primary decline followed by visible **Backup available**.
 - [x] Backup provider acceptance followed by **Event ready**.
 - [x] Submission thumbnail derived from project-owned assets.
-- [x] Public 2:25 1080p YouTube demo showing and explaining YouCam: https://youtu.be/rtxc3_vG1a8.
-- [x] Unauthenticated fetch verifies the final video URL is public.
+- [x] Public 2:42 1080p animated professional YouTube demo showing and explaining YouCam: https://youtu.be/0hUbCwDbn4I.
+- [x] Independent public watch-page readback verifies the final video URL and locked title.
 
 Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 
@@ -59,8 +70,8 @@ Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 - [x] Product description, API surprise, underexplored use case, and technical wall are drafted truthfully.
 - [x] Project start date derived from git history: August 14, 2026.
 - [x] App status is documented as an existing Relay prototype with a major Rescue update begun August 16, 2026.
-- [ ] User supplies submitter type.
-- [ ] User supplies country of residence.
+- [x] Submitter type supplied: Individual.
+- [x] Country of residence supplied: United States.
 - [x] Add final screenshots, thumbnail, and public video URL.
 - [x] Confirm repository visibility or judge access.
 - [x] Confirm the exact submitted copy contains no guarantees or unimplemented retailer-return claim.
@@ -74,7 +85,7 @@ Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 | Technological implementation | Typed Clothes v3 adapter; persisted jobs and private copy; stable assurance roles; bounded readiness; transactional expiry and idempotent failover; deterministic recovery E2E. | Local, CI, production smoke, and real YouCam path passed |
 | Coherent design | One visible promise connects the brief, primary/backup plan, provider deadline, recovery, and **Event ready** outcome. | Implemented and uploaded with four production screenshots |
 | Potential impact | Bounded occasionwear wedge, independent-provider resilience, 18% commission hypothesis, measurable conversion and completion outcomes. | Copy ready; market validation remains a hypothesis |
-| Quality/non-obviousness | YouCam is the visual trust layer inside a demand-first, failure-tolerant two-sided marketplace rather than a catalog widget. | Implemented; public 2:25 video proof live |
+| Quality/non-obviousness | YouCam is the visual trust layer inside a demand-first, failure-tolerant two-sided marketplace rather than a catalog widget. | Implemented; public 2:42 animated professional video proof live |
 
 ## Exact local release commands
 

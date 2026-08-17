@@ -10,9 +10,9 @@ The project and submission draft are live at https://devpost.com/software/relay-
 - **Public application:** https://relay-youcam-marketplace.vercel.app
 - **Project start date:** August 14, 2026 — derived from the first repository commit (`d75d13d`).
 - **App status:** Existing Relay prototype with a major Relay Rescue update begun August 16, 2026. Repository history contains the initial working marketplace before the Rescue assurance update.
-- **Submitter type:** **TODO — user-only answer**
-- **Country of residence:** **TODO — user-only answer**
-- **Public 1–3 minute video:** https://youtu.be/rtxc3_vG1a8 (2:25, 1080p, public, copyright check passed).
+- **Submitter type:** Individual
+- **Country of residence:** United States
+- **Public 1–3 minute video:** https://youtu.be/0hUbCwDbn4I (2:41.600 master; YouTube displays 2:42, 1080p, public, copyright check passed).
 - **Screenshots and thumbnail:** uploaded to the Devpost draft; project-owned source assets are in `docs/submission/assets/`.
 
 ## Product description
@@ -58,7 +58,7 @@ The hardest wall was safe recovery across asynchronous image work and concurrent
 
 - [x] Paste the final public video URL and verify its unauthenticated public page.
 - [x] Upload the final screenshot set and thumbnail.
-- [ ] Supply submitter type and country of residence.
+- [x] Supply submitter type and country of residence.
 - [x] Confirm repository visibility or judge access.
 - [x] Confirm the deployed commit passes production smoke and one real YouCam path.
 - [ ] Obtain the user's final explicit `yes, submit` immediately before submission.

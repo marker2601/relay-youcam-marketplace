@@ -1,15 +1,15 @@
-Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities; Relay makes sure you have something to wear.
+Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities. Relay makes sure you have something to wear, even when the first plan fails.
 
-One brief captures the event deadline, budget, category, measurements, location, and style. Relay privately stores the consented shopper photo. Providers never receive that source image or the shopper's measurements.
+A shopper starts with one urgent brief: event time, budget, measurements, style, location, and explicit photo consent. Relay keeps that source image private. Providers never receive the shopper's photo or measurement profile.
 
-Relay produces at most three explainable matches. It assigns the strongest as primary and prefers a different provider for the backup. Each preview uses YouCam Clothes version three through signed file registration and upload, task creation, bounded polling, and a private result copy. Readiness explains availability, measurement evidence, proximity, style, and confirmation. It does not guarantee physical fit.
+Relay hard-filters local inventory and ranks no more than three explainable matches. The best becomes Primary. The strongest eligible look from a different provider becomes Backup. These are real YouCam Clothes version three previews, not catalog mockups. Availability, measurement evidence, proximity, style, and provider confirmation form an Event Readiness Score. It explains the plan; it does not promise fit.
 
-The shopper requests the primary. Relay preserves the backup and gives the owner a response deadline based on urgency. When this owner declines, no payment has been collected and the shopper's private data remains hidden.
+The shopper requests the primary. Relay preserves the backup and sets a response deadline from the event's urgency. The primary boutique can review the qualified request, but not the shopper's private media or measurements. Here, the boutique declines. A normal marketplace sends the shopper back to search. Relay does not.
 
-Instead of restarting, Relay reveals the already rendered backup. One authorized, idempotent action creates the backup request from the original plan, with no new search, upload, or YouCam generation.
+The original timeline now says Backup available. The navy look is already rendered and belongs to an independent provider. One authorized, idempotent action activates it with no new search, upload, or YouCam generation.
 
-The independent backup provider accepts. Both sides converge on Event ready. In this prototype, that means provider-confirmed reservation intent, not guaranteed delivery or physical fit.
+The backup provider reviews the new request and accepts. The shopper's timeline advances to Event ready. In this prototype, that means provider-confirmed reservation intent. This prototype collects zero dollars. It does not process payments. Delivery and physical fit are not guaranteed. Availability and transaction completion are not guaranteed.
 
-Relay's current business hypothesis is an eighteen percent commission on completed rentals. Today it routes peer closets and boutique inventory. A future version can test an event-assurance fee and route retailer returns or local deadstock into urgent demand.
+Under the hood, Relay registers shopper and garment files, follows YouCam's signed upload instructions, creates each Clothes version three task, polls with bounded retries, and copies successful results into private storage. One preview can fail without blocking the rest. Server-side transactions, deadlines, and idempotency make the recovery path dependable.
 
-Relay combines visual confidence with a resilient two-provider plan. Primary fails. Backup is ready.
+Relay's business hypothesis is an eighteen percent commission on completed rentals. It starts with peer closets and boutiques, then can expand to stylist networks and underused local inventory. Visual confidence is useful. Visual confidence with a ready backup is a business. Relay: primary fails, backup is ready.
