@@ -6,7 +6,7 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 
 - [x] Strict TypeScript: `npm.cmd run typecheck` exited 0.
 - [x] ESLint: `npm.cmd run lint` exited 0 with zero errors and three known negative-fixture unused-variable warnings.
-- [x] Full Vitest suite: 29 files and 280 tests passed.
+- [x] Full Vitest suite: 29 files and 290 tests passed.
 - [x] Next.js 16.3.1 production build compiled and generated all routes successfully.
 - [x] Full Playwright suite: 16/16 desktop/mobile/accessibility scenarios passed, including decline-to-backup recovery.
 - [x] Exact tracked-artifact and secret-pattern checks were inspected: only the intentionally tracked `.env.example` matched the artifact expression; assignment matches were safe placeholders or command documentation, with no production values.
@@ -20,8 +20,9 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 - [x] Visual continuity passed: no `blackdetect=d=0.2:pix_th=0.10` interval; sequential and independently-seeked raw-RGB frames matched at 12%, 35%, 60%, 84%, and 98%.
 - [x] Full local `ggml-base.en` ASR retained the binding product claims, $0/no-payments disclosures, limitations, and 18% commission hypothesis.
 - [x] 49 UTF-8 caption cues and eight chapter cues pass the non-overlap compositor contract; every cue has at most two lines and every line is at most 43 characters; shopper is gold, primary is coral, and backup is green.
-- [x] Fresh focused verification: typecheck; lint (0 errors, 3 known fixture warnings); v2 unit 29/29; PowerShell parse; exact-master verifier; and `git diff --check`.
-- [ ] Replacement pending final visual/ASR review. Do not upload, attach, or change the existing public video and Devpost URL until the coordinator completes release review.
+- [x] Native-resolution visual review passed at all 49 caption midpoints, the first/middle/final frames of all eight chapters, and the first/middle/final frames of all six overlay cues. The three replacement caption chunks spanning 118.422-131.248 seconds are complete, readable, and unclipped.
+- [x] Fresh repository verification: focused v2 31/31; typecheck; lint (0 errors, 3 known fixture warnings); unit 213/213; serial integration 77/77; monolithic 290/290; production build; and `git diff --check`.
+- [ ] Publication replacement remains pending. Do not upload, attach, or change the existing public video and Devpost URL without the coordinator's release action.
 
 ## Relay Rescue behavior gate
 
