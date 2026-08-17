@@ -127,6 +127,7 @@ New-Item -ItemType Directory -Path $workingDirectory | Out-Null
 try {
   $captions = @()
   $timings = @()
+  $chapterStarts = [ordered]@{}
   $concatLines = @()
   [double]$offset = 0
   for ($index = 0; $index -lt $paragraphs.Count; $index++) {
@@ -137,7 +138,9 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Narration synthesis failed for chapter $($chapterIds[$index])." }
     $duration = Get-AudioDuration $chapterMp3
     $captions += Get-SrtCues -Path $chapterSrt -Offset $offset
-    $timings += [ordered]@{ id = $chapterIds[$index]; startSeconds = [Math]::Round($offset, 3); durationSeconds = [Math]::Round($duration, 3); wordCount = @($paragraphs[$index] -split '\s+').Count }
+    $chapterStart = [Math]::Round($offset, 3)
+    $chapterStarts[$chapterIds[$index]] = $chapterStart
+    $timings += [ordered]@{ id = $chapterIds[$index]; startSeconds = $chapterStart; durationSeconds = [Math]::Round($duration, 3); wordCount = @($paragraphs[$index] -split '\s+').Count }
     & ffmpeg -y -v error -i $chapterMp3 -f lavfi -t 0.18 -i 'anullsrc=channel_layout=stereo:sample_rate=48000' -filter_complex '[0:a]aresample=48000,aformat=channel_layouts=stereo[a];[a][1:a]concat=n=2:v=0:a=1' -ar 48000 -ac 2 -c:a pcm_s16le $chapterWav
     if ($LASTEXITCODE -ne 0) { throw "Could not prepare chapter $($chapterIds[$index]) for concatenation." }
     $concatLines += "file '$($chapterWav.Replace("'", "'\\''"))'"
@@ -150,9 +153,15 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'Could not create unnormalized narration WAV.' }
   $masterPath = Join-Path $assetsDirectory 'relay-professional-narration-v2.wav'
   $loudness = Normalize-Narration -SourcePath $rawMasterPath -TargetPath $masterPath
-  $captions | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $assetsDirectory 'relay-professional-captions-v2.json') -Encoding utf8
-  $timings | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $assetsDirectory 'relay-professional-timings-v2.json') -Encoding utf8
-  $loudness | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $assetsDirectory 'relay-professional-narration-v2-loudness.json') -Encoding utf8
+  $timingManifest = [ordered]@{
+    audioDurationSeconds = [Math]::Round((Get-AudioDuration $masterPath), 3)
+    chapterStarts = $chapterStarts
+    chapters = $timings
+  }
+  $utf8NoBom = [Text.UTF8Encoding]::new($false)
+  [IO.File]::WriteAllText((Join-Path $assetsDirectory 'relay-professional-captions-v2.json'), ($captions | ConvertTo-Json -Depth 3), $utf8NoBom)
+  [IO.File]::WriteAllText((Join-Path $assetsDirectory 'relay-professional-timings-v2.json'), ($timingManifest | ConvertTo-Json -Depth 4), $utf8NoBom)
+  [IO.File]::WriteAllText((Join-Path $assetsDirectory 'relay-professional-narration-v2-loudness.json'), ($loudness | ConvertTo-Json -Depth 5), $utf8NoBom)
 } finally {
   if (Test-Path -LiteralPath $workingDirectory) { Remove-Item -LiteralPath $workingDirectory -Recurse -Force }
 }

@@ -52,6 +52,33 @@ describe("professional demo v2 narration", () => {
     expect(generator).toContain("loudnorm=I=-16:TP=-1.5:LRA=11");
     expect(generator).toContain("relay-professional-narration-v2-loudness.json");
   });
+
+  it("writes the Task 2 timing contract as BOM-free canonical JSON", () => {
+    const generator = readFileSync(
+      resolve(process.cwd(), "scripts/generate-professional-narration-v2.ps1"),
+      "utf8",
+    );
+
+    expect(generator).toContain("$timingManifest = [ordered]@{");
+    expect(generator).toContain("audioDurationSeconds");
+    expect(generator).toContain("chapterStarts");
+    expect(generator).toContain("[Text.UTF8Encoding]::new($false)");
+    expect(generator).toContain("[IO.File]::WriteAllText");
+  });
+});
+
+describe("professional demo v2 composition", () => {
+  it("renders v2 beside the current master", async () => {
+    const source = await readFile("scripts/compose-professional-demo-v2.ps1", "utf8");
+    expect(source).toContain("relay-professional-demo-v2.mp4");
+    expect(source).not.toMatch(/Remove-Item.+relay-professional-demo\.mp4/);
+    expect(source).toContain("subtitles=");
+    expect(source).toContain("loudnorm=I=-16:TP=-1.5:LRA=11");
+    expect(source).toContain("+faststart");
+    expect(source).toContain("$AssetDirectory = Join-Path $PSScriptRoot");
+    expect(source).toContain("[double]::IsNaN");
+    expect(source).toContain("[double]::IsInfinity");
+  });
 });
 
 describe("professional demo v2 Human Handoff motion", () => {
