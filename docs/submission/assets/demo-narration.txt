@@ -1,4 +1,4 @@
-Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities. Relay makes sure you have something to wear, even when the first plan fails.
+Hey—do you know what makes Relay different? It does not just show you an outfit. It keeps a ready backup in motion, so when the first plan falls through, your event does not. Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities. Relay makes sure you have something to wear, even when the first plan fails.
 
 A shopper starts with one urgent brief: event time, budget, measurements, style, location, and explicit photo consent. Relay keeps that source image private. Providers never receive the shopper's photo or measurement profile.
 

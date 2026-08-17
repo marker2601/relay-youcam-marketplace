@@ -1,0 +1,53 @@
+{
+  "engine": "edge-tts",
+  "version": "7.2.8",
+  "voice": "en-US-JennyNeural",
+  "defaultRate": "-3%",
+  "defaultPitch": "-2Hz",
+  "volume": "-3%",
+  "internalPauseSeconds": 0.22,
+  "chapterPauseSeconds": 0.12,
+  "sample": {
+    "chapterId": "promise",
+    "segmentIndexes": [0, 1, 2]
+  },
+  "chapters": [
+    { "id": "promise", "segments": [
+      { "text": "Hey—do you know what makes Relay different?", "rate": "+0%", "pitch": "+8Hz" },
+      { "text": "It does not just show you an outfit.", "rate": "-5%", "pitch": "-5Hz" },
+      { "text": "It keeps a ready backup in motion, so when the first plan falls through, your event does not.", "rate": "+0%", "pitch": "+5Hz" },
+      { "text": "Relay is the reliability layer for time-sensitive fashion. Discovery apps show possibilities. Relay makes sure you have something to wear, even when the first plan fails.", "rate": "-2%", "pitch": "+1Hz" }
+    ]},
+    { "id": "brief", "segments": [
+      { "text": "A shopper starts with one urgent brief: event time, budget, measurements, style, location, and explicit photo consent.", "rate": "+1%", "pitch": "+3Hz" },
+      { "text": "Relay keeps that source image private. Providers never receive the shopper's photo or measurement profile.", "rate": "-3%", "pitch": "-3Hz" }
+    ]},
+    { "id": "plan", "segments": [
+      { "text": "Relay hard-filters local inventory and ranks no more than three explainable matches. The best becomes Primary. The strongest eligible look from a different provider becomes Backup.", "rate": "+0%", "pitch": "+2Hz" },
+      { "text": "These are real YouCam Clothes version three previews, not catalog mockups.", "rate": "+2%", "pitch": "+4Hz" },
+      { "text": "Availability, measurement evidence, proximity, style, and provider confirmation form an Event Readiness Score. It explains the plan; it does not promise fit.", "rate": "-3%", "pitch": "-3Hz" }
+    ]},
+    { "id": "failure", "segments": [
+      { "text": "The shopper requests the primary. Relay preserves the backup and sets a response deadline from the event's urgency.", "rate": "-1%", "pitch": "+1Hz" },
+      { "text": "The primary boutique can review the qualified request, but not the shopper's private media or measurements. Here, the boutique declines.", "rate": "-4%", "pitch": "-4Hz" },
+      { "text": "A normal marketplace sends the shopper back to search. Relay does not.", "rate": "+1%", "pitch": "+3Hz" }
+    ]},
+    { "id": "recovery", "segments": [
+      { "text": "The original timeline now says Backup available. The navy look is already rendered and belongs to an independent provider.", "rate": "+1%", "pitch": "+3Hz" },
+      { "text": "One authorized, idempotent action activates it with no new search, upload, or YouCam generation.", "rate": "+2%", "pitch": "+5Hz" }
+    ]},
+    { "id": "ready", "segments": [
+      { "text": "The backup provider reviews the new request and accepts. The shopper's timeline advances to Event ready.", "rate": "+2%", "pitch": "+5Hz" },
+      { "text": "In this prototype, that means provider-confirmed reservation intent. This prototype collects zero dollars. It does not process payments.", "rate": "-3%", "pitch": "-3Hz" },
+      { "text": "Delivery and physical fit are not guaranteed. Availability and transaction completion are not guaranteed.", "rate": "-4%", "pitch": "-4Hz" }
+    ]},
+    { "id": "youcam", "segments": [
+      { "text": "Under the hood, Relay registers shopper and garment files, follows YouCam's signed upload instructions, creates each Clothes version three task, polls with bounded retries, and copies successful results into private storage.", "rate": "-2%", "pitch": "+1Hz" },
+      { "text": "One preview can fail without blocking the rest. Server-side transactions, deadlines, and idempotency make the recovery path dependable.", "rate": "+0%", "pitch": "+3Hz" }
+    ]},
+    { "id": "business", "segments": [
+      { "text": "Relay's business hypothesis is an eighteen percent commission on completed rentals. It starts with peer closets and boutiques, then can expand to stylist networks and underused local inventory.", "rate": "-1%", "pitch": "+1Hz" },
+      { "text": "Visual confidence is useful. Visual confidence with a ready backup is a business. Relay: primary fails, backup is ready.", "rate": "+2%", "pitch": "+5Hz" }
+    ]}
+  ]
+}

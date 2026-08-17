@@ -14,14 +14,14 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 
 ## Exact local v2 video-master verification
 
-- [x] Exact candidate `docs/submission/assets/relay-professional-demo-v2.mp4` verified: SHA-256 `BA1F60AE0C0B9CF13E5A228EDDB9E86560665773CAF5909E665E00064C857ABB`; 161.600000 seconds; 4,848 decoded frames.
+- [x] Exact candidate `docs/submission/assets/relay-professional-demo-v2.mp4` verified: SHA-256 `EC2449532A49FFEF490402A344F20559D43DD532315BD64C0430E593D36651C4`; 160.933333 seconds; 4,828 decoded frames.
 - [x] Master contract passed: H.264 `yuv420p`, 1920x1080 at 30 fps; AAC stereo at 48 kHz; `ftyp` -> `moov` -> `mdat`; full-frame decode.
 - [x] Audio passed: -16.0 LUFS integrated, -2.0 dBFS true peak, and no `silencedetect=noise=-45dB:d=1.2` interval.
 - [x] Visual continuity passed: no `blackdetect=d=0.2:pix_th=0.10` interval; sequential and independently-seeked raw-RGB frames matched at 12%, 35%, 60%, 84%, and 98%.
 - [x] Full local `ggml-base.en` ASR retained the binding product claims, $0/no-payments disclosures, limitations, and 18% commission hypothesis.
-- [x] All 36 caption midpoints and eight chapter cues were inspected: readable product proof, clear caption/control separation, approved character colors, and no visible credentials, task IDs, signed URLs, private keys, local paths, or unrelated browser content.
-- [x] Fresh repository verification: typecheck; lint (0 errors, 3 known fixture warnings); unit 203/203; single-worker integration 77/77; monolithic 280/280; build; and `git diff --check`.
-- [x] Published and attached the verified v2 master: https://youtu.be/0hUbCwDbn4I. YouTube displays 2:42; the exact local master is 161.600000 seconds. Studio copyright checks completed with no issues, and Devpost readback returned this URL while `submitted_at` remained null.
+- [x] 39 UTF-8 caption cues and eight chapter cues pass the non-overlap compositor contract; shopper is gold, primary is coral, and backup is green.
+- [x] Fresh focused verification: typecheck; lint (0 errors, 3 known fixture warnings); v2 unit 29/29; PowerShell parse; exact-master verifier; and `git diff --check`.
+- [ ] Replacement pending final visual/ASR review. Do not upload, attach, or change the existing public video and Devpost URL until the coordinator completes release review.
 
 ## Relay Rescue behavior gate
 
