@@ -22,7 +22,7 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 - [x] 49 UTF-8 caption cues and eight chapter cues pass the non-overlap compositor contract; every cue has at most two lines and every line is at most 43 characters; shopper is gold, primary is coral, and backup is green.
 - [x] Native-resolution visual review passed at all 49 caption midpoints, the first/middle/final frames of all eight chapters, and the first/middle/final frames of all six overlay cues. The three replacement caption chunks spanning 118.422-131.248 seconds are complete, readable, and unclipped.
 - [x] Fresh repository verification: focused v2 31/31; typecheck; lint (0 errors, 3 known fixture warnings); unit 213/213; serial integration 77/77; monolithic 290/290; production build; and `git diff --check`.
-- [x] The approved master was published at https://youtu.be/QR8vyKPXSs8 and attached to the Devpost draft; independent public and Devpost readbacks passed with `submitted_at: null`.
+- [x] The approved master was published at https://youtu.be/QR8vyKPXSs8, attached to Devpost, and submitted; independent public and Devpost readbacks passed with `submitted_at: 2026-08-17T00:55:13.712-04:00`.
 
 ## Relay Rescue behavior gate
 
@@ -76,8 +76,8 @@ Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 - [x] Add final screenshots, thumbnail, and public video URL.
 - [x] Confirm repository visibility or judge access.
 - [x] Confirm the exact submitted copy contains no guarantees or unimplemented retailer-return claim.
-- [ ] Obtain the user's final explicit `yes, submit` immediately before the irreversible submit action.
-- [ ] Submit before August 17, 2026 at 15:45 UTC.
+- [x] Obtain the user's final explicit submission authorization immediately before the irreversible submit action.
+- [x] Submit before August 17, 2026 at 15:45 UTC.
 
 ## Four-criterion judging gate
 

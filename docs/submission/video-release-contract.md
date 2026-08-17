@@ -52,4 +52,4 @@
 
 - Public URL: https://youtu.be/QR8vyKPXSs8
 - YouTube Studio reported a completed copyright check with no issues; independent public metadata resolved to the locked title, public visibility, and 160.933-second duration.
-- Devpost project `relay-xr7byl` was read back with this exact URL and `submitted_at: null`; earlier Relay videos, including prior release https://youtu.be/0hUbCwDbn4I, remain available.
+- Devpost project `relay-xr7byl` was submitted with this exact URL and read back with `submitted_at: 2026-08-17T00:55:13.712-04:00`; earlier Relay videos, including prior release https://youtu.be/0hUbCwDbn4I, remain available.

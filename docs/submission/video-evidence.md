@@ -20,5 +20,5 @@ The video uses real production-product footage throughout. It demonstrates the p
 ## Publication and Devpost readback
 
 - Current public video: https://youtu.be/QR8vyKPXSs8. YouTube Studio completed processing and reported no copyright issues; independent public metadata resolved to the locked title, public visibility, and 160.933-second duration.
-- Devpost project `relay-xr7byl` was read back with this exact URL and `submitted_at: null`.
+- Devpost project `relay-xr7byl` was submitted with this exact URL and read back with `submitted_at: 2026-08-17T00:55:13.712-04:00`.
 - Prior public release https://youtu.be/0hUbCwDbn4I remains available and is not the active Devpost video.
