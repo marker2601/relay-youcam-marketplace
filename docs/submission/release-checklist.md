@@ -6,7 +6,7 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 
 - [x] Strict TypeScript: `npm.cmd run typecheck` exited 0.
 - [x] ESLint: `npm.cmd run lint` exited 0 with zero errors and three known negative-fixture unused-variable warnings.
-- [x] Full Vitest suite: 29 files and 280 tests passed.
+- [x] Full Vitest suite: 29 files and 290 tests passed.
 - [x] Next.js 16.3.1 production build compiled and generated all routes successfully.
 - [x] Full Playwright suite: 16/16 desktop/mobile/accessibility scenarios passed, including decline-to-backup recovery.
 - [x] Exact tracked-artifact and secret-pattern checks were inspected: only the intentionally tracked `.env.example` matched the artifact expression; assignment matches were safe placeholders or command documentation, with no production values.
@@ -14,14 +14,15 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 
 ## Exact local v2 video-master verification
 
-- [x] Exact candidate `docs/submission/assets/relay-professional-demo-v2.mp4` verified: SHA-256 `BA1F60AE0C0B9CF13E5A228EDDB9E86560665773CAF5909E665E00064C857ABB`; 161.600000 seconds; 4,848 decoded frames.
+- [x] Exact candidate `docs/submission/assets/relay-professional-demo-v2.mp4` verified: SHA-256 `60FE80A9308E48E5FF3835279DB7E9BD177332B39D27D44635D27BA2DE62213B`; 160.933333 seconds; 4,828 decoded frames.
 - [x] Master contract passed: H.264 `yuv420p`, 1920x1080 at 30 fps; AAC stereo at 48 kHz; `ftyp` -> `moov` -> `mdat`; full-frame decode.
-- [x] Audio passed: -16.0 LUFS integrated, -2.0 dBFS true peak, and no `silencedetect=noise=-45dB:d=1.2` interval.
+- [x] Audio passed: -16.0 LUFS integrated, -1.9 dBFS true peak, and no `silencedetect=noise=-45dB:d=1.2` interval.
 - [x] Visual continuity passed: no `blackdetect=d=0.2:pix_th=0.10` interval; sequential and independently-seeked raw-RGB frames matched at 12%, 35%, 60%, 84%, and 98%.
 - [x] Full local `ggml-base.en` ASR retained the binding product claims, $0/no-payments disclosures, limitations, and 18% commission hypothesis.
-- [x] All 36 caption midpoints and eight chapter cues were inspected: readable product proof, clear caption/control separation, approved character colors, and no visible credentials, task IDs, signed URLs, private keys, local paths, or unrelated browser content.
-- [x] Fresh repository verification: typecheck; lint (0 errors, 3 known fixture warnings); unit 203/203; single-worker integration 77/77; monolithic 280/280; build; and `git diff --check`.
-- [x] Published and attached the verified v2 master: https://youtu.be/0hUbCwDbn4I. YouTube displays 2:42; the exact local master is 161.600000 seconds. Studio copyright checks completed with no issues, and Devpost readback returned this URL while `submitted_at` remained null.
+- [x] 49 UTF-8 caption cues and eight chapter cues pass the non-overlap compositor contract; every cue has at most two lines and every line is at most 43 characters; shopper is gold, primary is coral, and backup is green.
+- [x] Native-resolution visual review passed at all 49 caption midpoints, the first/middle/final frames of all eight chapters, and the first/middle/final frames of all six overlay cues. The three replacement caption chunks spanning 118.422-131.248 seconds are complete, readable, and unclipped.
+- [x] Fresh repository verification: focused v2 31/31; typecheck; lint (0 errors, 3 known fixture warnings); unit 213/213; serial integration 77/77; monolithic 290/290; production build; and `git diff --check`.
+- [x] The approved master was published at https://youtu.be/QR8vyKPXSs8 and attached to the Devpost draft; independent public and Devpost readbacks passed with `submitted_at: null`.
 
 ## Relay Rescue behavior gate
 
@@ -58,7 +59,7 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 - [x] Primary decline followed by visible **Backup available**.
 - [x] Backup provider acceptance followed by **Event ready**.
 - [x] Submission thumbnail derived from project-owned assets.
-- [x] Public 2:42 1080p animated professional YouTube demo showing and explaining YouCam: https://youtu.be/0hUbCwDbn4I.
+- [x] Public 2:41 1080p animated professional YouTube demo showing and explaining YouCam: https://youtu.be/QR8vyKPXSs8.
 - [x] Independent public watch-page readback verifies the final video URL and locked title.
 
 Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
@@ -85,7 +86,7 @@ Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 | Technological implementation | Typed Clothes v3 adapter; persisted jobs and private copy; stable assurance roles; bounded readiness; transactional expiry and idempotent failover; deterministic recovery E2E. | Local, CI, production smoke, and real YouCam path passed |
 | Coherent design | One visible promise connects the brief, primary/backup plan, provider deadline, recovery, and **Event ready** outcome. | Implemented and uploaded with four production screenshots |
 | Potential impact | Bounded occasionwear wedge, independent-provider resilience, 18% commission hypothesis, measurable conversion and completion outcomes. | Copy ready; market validation remains a hypothesis |
-| Quality/non-obviousness | YouCam is the visual trust layer inside a demand-first, failure-tolerant two-sided marketplace rather than a catalog widget. | Implemented; public 2:42 animated professional video proof live |
+| Quality/non-obviousness | YouCam is the visual trust layer inside a demand-first, failure-tolerant two-sided marketplace rather than a catalog widget. | Implemented; public 2:41 animated professional video proof live |
 
 ## Exact local release commands
 

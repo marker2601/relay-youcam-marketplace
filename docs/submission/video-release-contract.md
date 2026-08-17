@@ -10,7 +10,7 @@
 ## Master
 
 - Target duration: 2:10–2:40; hard limit 3:00.
-- Published v2 master: 161.600000 seconds (YouTube displays 2:42), SHA-256 `BA1F60AE0C0B9CF13E5A228EDDB9E86560665773CAF5909E665E00064C857ABB`.
+- Published v2 master: 160.933333 seconds, SHA-256 `60FE80A9308E48E5FF3835279DB7E9BD177332B39D27D44635D27BA2DE62213B`.
 - Format: H.264, yuv420p, 1920×1080, constant 30 fps, AAC stereo 48 kHz, faststart.
 - Audio: clean narration, approximately 130–175 WPM, normalized to -16 LUFS, no music.
 - Captions: authored from the locked narration, at most two lines, approximately 42 characters per line, outside judge-critical controls.
@@ -50,6 +50,6 @@
 
 ## Published v2 readback
 
-- Public URL: https://youtu.be/0hUbCwDbn4I
-- YouTube Studio reported a completed copyright check with no issues; the public watch page independently resolved to the locked title and 2:42 display duration.
-- Devpost project `relay-xr7byl` was read back with this exact URL and `submitted_at: null`; earlier Relay videos remain available.
+- Public URL: https://youtu.be/QR8vyKPXSs8
+- YouTube Studio reported a completed copyright check with no issues; independent public metadata resolved to the locked title, public visibility, and 160.933-second duration.
+- Devpost project `relay-xr7byl` was read back with this exact URL and `submitted_at: null`; earlier Relay videos, including prior release https://youtu.be/0hUbCwDbn4I, remain available.

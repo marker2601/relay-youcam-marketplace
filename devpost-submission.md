@@ -12,7 +12,7 @@ The project and submission draft are live at https://devpost.com/software/relay-
 - **App status:** Existing Relay prototype with a major Relay Rescue update begun August 16, 2026. Repository history contains the initial working marketplace before the Rescue assurance update.
 - **Submitter type:** Individual
 - **Country of residence:** United States
-- **Public 1–3 minute video:** https://youtu.be/0hUbCwDbn4I (2:41.600 master; YouTube displays 2:42, 1080p, public, copyright check passed).
+- **Public 1–3 minute video:** https://youtu.be/QR8vyKPXSs8 (2:40.933 master, 1080p, public, copyright check passed).
 - **Screenshots and thumbnail:** uploaded to the Devpost draft; project-owned source assets are in `docs/submission/assets/`.
 
 ## Product description

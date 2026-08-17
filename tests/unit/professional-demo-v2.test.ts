@@ -12,12 +12,14 @@ import {
   NARRATION_CHAPTERS,
   validateMotionCues,
   VOICE_PROFILE,
+  VOICE_DELIVERY_PROFILE,
   VOICE_SAMPLE_SEGMENTS,
 } from "../../scripts/video/professional-demo-v2";
 import { runOverlayRenderer } from "../../scripts/render-professional-overlay-v2";
 
 const execFileAsync = promisify(execFile);
 const compositorPath = resolve(process.cwd(), "scripts/compose-professional-demo-v2.ps1");
+const narrationGeneratorPath = resolve(process.cwd(), "scripts/generate-professional-narration-v2.ps1");
 const chapterIds = ["promise", "brief", "plan", "failure", "recovery", "ready", "youcam", "business"] as const;
 const compositorPreflightTimeoutMs = 15_000;
 
@@ -136,6 +138,36 @@ async function expectPreflightFailure(
   }
 }
 
+async function runNarrationTimingProbe(preparedDurationSeconds: number): Promise<string> {
+  const powershellExecutable = await resolvePowerShellExecutable();
+  const { stdout } = await execFileAsync(powershellExecutable, [
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-File", narrationGeneratorPath,
+    "-InspectPreparedDurationSeconds", String(preparedDurationSeconds),
+  ], { cwd: process.cwd(), windowsHide: true });
+  return stdout.trim();
+}
+
+async function normalizeCaptionCues(captions: readonly { startSeconds: number; endSeconds: number; text: string }[]): Promise<unknown> {
+  const fixtureDirectory = await mkdtemp(join(process.cwd(), ".relay-v2-caption-normalization-"));
+  const captionPath = join(fixtureDirectory, "captions.json");
+  await writeFile(captionPath, JSON.stringify(captions), "utf8");
+  try {
+    const powershellExecutable = await resolvePowerShellExecutable();
+    const { stdout } = await execFileAsync(powershellExecutable, [
+      "-NoProfile",
+      "-ExecutionPolicy", "Bypass",
+      "-File", narrationGeneratorPath,
+      "-InspectCaptionPath", captionPath,
+      "-NormalizeCaptionCues",
+    ], { cwd: process.cwd(), windowsHide: true });
+    return JSON.parse(stdout);
+  } finally {
+    await rm(fixtureDirectory, { recursive: true, force: true });
+  }
+}
+
 describe("professional demo v2 narration", () => {
   it("uses the approved friendly female neural profile", () => {
     expect(VOICE_PROFILE).toEqual({
@@ -167,6 +199,33 @@ describe("professional demo v2 narration", () => {
     ]);
   });
 
+  it("uses the approved three-beat hook as the actual release opening", () => {
+    expect(NARRATION_CHAPTERS[0]!.text).toMatch(/^Hey—do you know what makes Relay different\? It does not just show you an outfit\. It keeps a ready backup in motion, so when the first plan falls through, your event does not\./);
+  });
+
+  it("preserves millisecond chapter duration arithmetic through Windows PowerShell", async () => {
+    expect(await runNarrationTimingProbe(10.998)).toBe("10.878");
+  });
+
+  it("chunks the 224-character production caption into readable, contiguous ASS lines", async () => {
+    const original = "Under the hood, Relay registers shopper and garment files, follows YouCam's signed upload instructions, creates each Clothes version three task, polls with bounded retries, and copies successful results into private storage.";
+    expect(original).toHaveLength(224);
+    const captions = await normalizeCaptionCues([{ startSeconds: 118.421, endSeconds: 131.245, text: original }]) as Array<{
+      startSeconds: number; endSeconds: number; text: string;
+    }>;
+    expect(captions.map((caption) => caption.text.replace(/\s+/g, " ").trim()).join(" ")).toBe(original);
+    expect(captions).toHaveLength(3);
+    for (const [index, caption] of captions.entries()) {
+      expect(caption.endSeconds).toBeGreaterThan(caption.startSeconds);
+      expect(Number.isFinite(caption.startSeconds)).toBe(true);
+      expect(Number.isFinite(caption.endSeconds)).toBe(true);
+      const lines = caption.text.split("\n");
+      expect(lines.length).toBeLessThanOrEqual(2);
+      expect(lines.every((line) => line.length <= 43)).toBe(true);
+      if (index > 0) expect(caption.startSeconds).toBe(captions[index - 1]!.endSeconds);
+    }
+  });
+
   it("locks narration-stage loudness normalization and measurement", () => {
     const generator = readFileSync(
       resolve(process.cwd(), "scripts/generate-professional-narration-v2.ps1"),
@@ -177,17 +236,11 @@ describe("professional demo v2 narration", () => {
     expect(generator).toContain("relay-professional-narration-v2-loudness.json");
   });
 
-  it("trims chapter-tail silence before adding a deterministic natural pause", () => {
-    const generator = readFileSync(
-      resolve(process.cwd(), "scripts/generate-professional-narration-v2.ps1"),
-      "utf8",
-    );
-
-    expect(generator).toContain("$chapterPauseSeconds = 0.12");
-    expect(generator).toContain("areverse,silenceremove=start_periods=1:start_duration=0.10:start_threshold=-45dB:start_silence=0,areverse");
-    expect(generator).toContain("$preparedDuration = Get-AudioDuration $chapterWav");
-    expect(generator).toContain("$caption.endSeconds = [Math]::Round([Math]::Min($caption.endSeconds, $chapterEnd), 3)");
-    expect(generator).toContain("$offset += $preparedDuration");
+  it("shares the approved internal and final pauses across the release delivery profile", () => {
+    expect(VOICE_DELIVERY_PROFILE.internalPauseSeconds).toBe(0.22);
+    expect(VOICE_DELIVERY_PROFILE.chapterPauseSeconds).toBe(0.12);
+    expect(VOICE_DELIVERY_PROFILE.sample.chapterId).toBe("promise");
+    expect(VOICE_DELIVERY_PROFILE.sample.segmentIndexes).toEqual([0, 1, 2]);
   });
 
   it("writes the Task 2 timing contract as BOM-free canonical JSON", () => {
@@ -325,6 +378,57 @@ describe("professional demo v2 composition", () => {
     try {
       await writeFile(fixture.captionPath, JSON.stringify([{ startSeconds: 1, endSeconds: 2, text: "A stale caption." }]), "utf8");
       await expectPreflightFailure(fixture, "caption marker hash does not match");
+    } finally {
+      await removePreflightFixture(fixture);
+    }
+  }, compositorPreflightTimeoutMs);
+
+  it("rejects a chapter whose declared duration reaches into the next chapter", async () => {
+    const fixture = await createPreflightFixture();
+    try {
+      const timing = JSON.parse(await readFile(fixture.timingPath, "utf8"));
+      timing.chapters[0].durationSeconds = 10.001;
+      await writeFile(fixture.timingPath, JSON.stringify(timing), "utf8");
+      await expectPreflightFailure(fixture, "overlaps the next narration chapter");
+    } finally {
+      await removePreflightFixture(fixture);
+    }
+  }, compositorPreflightTimeoutMs);
+
+  it("rejects overlapping caption intervals before encoding", async () => {
+    const fixture = await createPreflightFixture();
+    try {
+      const captions = JSON.stringify([
+        { startSeconds: 1, endSeconds: 3, text: "The primary plan is moving." },
+        { startSeconds: 2.5, endSeconds: 4, text: "The backup is already ready." },
+      ]);
+      const captionHash = createHash("sha256").update(captions, "utf8").digest("hex");
+      const overlay = [
+        "[Script Info]",
+        "; relay-caption-count=2",
+        `; relay-caption-sha256=${captionHash}`,
+        "",
+        "[Events]",
+        "Dialogue: 10,0:00:01.00,0:00:03.00,Caption,caption-1,0,0,0,,The primary plan is moving.",
+        "Dialogue: 10,0:00:02.50,0:00:04.00,Caption,caption-2,0,0,0,,The backup is already ready.",
+      ].join("\r\n");
+      await writeFile(fixture.captionPath, captions, "utf8");
+      await writeFile(fixture.overlayPath, overlay, "utf8");
+      await expectPreflightFailure(fixture, "Caption 2 overlaps the previous caption");
+    } finally {
+      await removePreflightFixture(fixture);
+    }
+  }, compositorPreflightTimeoutMs);
+
+  it("rejects a caption line exceeding the release-safe 43-character limit", async () => {
+    const fixture = await createPreflightFixture();
+    try {
+      const captions = JSON.stringify([{ startSeconds: 1, endSeconds: 4, text: "This caption line is deliberately much longer than forty-three readable characters." }]);
+      const captionHash = createHash("sha256").update(captions, "utf8").digest("hex");
+      const overlay = ["[Script Info]", "; relay-caption-count=1", `; relay-caption-sha256=${captionHash}`, "", "[Events]", "Dialogue: 10,0:00:01.00,0:00:04.00,Caption,caption-1,0,0,0,,Long caption."].join("\r\n");
+      await writeFile(fixture.captionPath, captions, "utf8");
+      await writeFile(fixture.overlayPath, overlay, "utf8");
+      await expectPreflightFailure(fixture, "Caption 1 line 1 exceeds 43 characters");
     } finally {
       await removePreflightFixture(fixture);
     }

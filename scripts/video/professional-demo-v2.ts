@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import deliveryProfileJson from "../../docs/submission/assets/relay-professional-v2-delivery-profile.json";
 
 export type VoiceProfile = Readonly<{
   engine: "edge-tts";
@@ -23,28 +24,73 @@ export type NarrationChapter = Readonly<{
 
 export type VoiceSampleSegment = Readonly<{
   text: string;
-  rate: "+0%" | "-5%";
-  pitch: "+8Hz" | "-5Hz" | "+5Hz";
+  rate: string;
+  pitch: string;
 }>;
 
+export type VoiceDeliveryChapter = Readonly<{
+  id: NarrationChapterId;
+  segments: readonly VoiceSampleSegment[];
+}>;
+
+export type VoiceDeliveryProfile = Readonly<{
+  engine: "edge-tts";
+  version: "7.2.8";
+  voice: "en-US-JennyNeural";
+  defaultRate: "-3%";
+  defaultPitch: "-2Hz";
+  volume: "-3%";
+  internalPauseSeconds: number;
+  chapterPauseSeconds: number;
+  sample: Readonly<{ chapterId: NarrationChapterId; segmentIndexes: readonly number[] }>;
+  chapters: readonly VoiceDeliveryChapter[];
+}>;
+
+export const VOICE_DELIVERY_PROFILE = deliveryProfileJson as VoiceDeliveryProfile;
+
 export const VOICE_PROFILE: VoiceProfile = {
-  engine: "edge-tts",
-  version: "7.2.8",
-  voice: "en-US-JennyNeural",
-  rate: "-3%",
-  pitch: "-2Hz",
-  volume: "-3%",
+  engine: VOICE_DELIVERY_PROFILE.engine,
+  version: VOICE_DELIVERY_PROFILE.version,
+  voice: VOICE_DELIVERY_PROFILE.voice,
+  rate: VOICE_DELIVERY_PROFILE.defaultRate,
+  pitch: VOICE_DELIVERY_PROFILE.defaultPitch,
+  volume: VOICE_DELIVERY_PROFILE.volume,
 };
 
-export const VOICE_SAMPLE_SEGMENTS: readonly VoiceSampleSegment[] = Object.freeze([
+const LEGACY_SAMPLE_SEGMENTS: readonly VoiceSampleSegment[] = Object.freeze([
   Object.freeze({ text: "Hey—do you know what makes Relay different?", rate: "+0%", pitch: "+8Hz" }),
   Object.freeze({ text: "It does not just show you an outfit.", rate: "-5%", pitch: "-5Hz" }),
   Object.freeze({ text: "It keeps a ready backup in motion, so when the first plan falls through, your event does not.", rate: "+0%", pitch: "+5Hz" }),
 ]);
 
+void LEGACY_SAMPLE_SEGMENTS;
+
 const CHAPTER_IDS: readonly NarrationChapterId[] = [
   "promise", "brief", "plan", "failure", "recovery", "ready", "youcam", "business",
 ];
+
+const profileChapterIds = VOICE_DELIVERY_PROFILE.chapters.map((chapter) => chapter.id);
+if (profileChapterIds.length !== CHAPTER_IDS.length || profileChapterIds.join(",") !== CHAPTER_IDS.join(",")) {
+  throw new Error("Voice delivery profile must contain the eight canonical chapters in order.");
+}
+if (VOICE_DELIVERY_PROFILE.internalPauseSeconds !== 0.22 || VOICE_DELIVERY_PROFILE.chapterPauseSeconds !== 0.12) {
+  throw new Error("Voice delivery profile must preserve the approved 220 ms and 120 ms pauses.");
+}
+const sampleChapter = VOICE_DELIVERY_PROFILE.chapters.find((chapter) => chapter.id === VOICE_DELIVERY_PROFILE.sample.chapterId);
+if (!sampleChapter) throw new Error("Voice delivery sample chapter is missing.");
+export const VOICE_SAMPLE_SEGMENTS: readonly VoiceSampleSegment[] = Object.freeze(
+  VOICE_DELIVERY_PROFILE.sample.segmentIndexes.map((index) => {
+    const segment = sampleChapter.segments[index];
+    if (!segment) throw new Error("Voice delivery sample references a missing segment.");
+    return Object.freeze(segment);
+  }),
+);
+export const VOICE_DELIVERY_CHAPTERS: readonly VoiceDeliveryChapter[] = Object.freeze(
+  VOICE_DELIVERY_PROFILE.chapters.map((chapter) => Object.freeze({
+    id: chapter.id,
+    segments: Object.freeze(chapter.segments.map((segment) => Object.freeze(segment))),
+  })),
+);
 
 const CHAPTER_LABELS: readonly string[] = [
   "The promise", "The brief", "The plan", "Primary failure",
@@ -71,6 +117,14 @@ export const NARRATION_CHAPTERS: readonly NarrationChapter[] = Object.freeze(
     text,
   })),
 );
+
+for (const [index, chapter] of NARRATION_CHAPTERS.entries()) {
+  const profileChapter = VOICE_DELIVERY_CHAPTERS[index]!;
+  const profileText = profileChapter.segments.map((segment) => segment.text).join(" ");
+  if (profileChapter.id !== chapter.id || profileText !== chapter.text) {
+    throw new Error(`Voice delivery profile text must exactly match narration chapter '${chapter.id}'.`);
+  }
+}
 
 export type MotionCue = Readonly<{
   id: "shopper-brief" | "youcam-flow" | "primary-backup-plan" |

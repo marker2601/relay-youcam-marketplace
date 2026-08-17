@@ -71,6 +71,7 @@ function Get-CanonicalTimingManifest([string]$Path) {
   if ($chapters.Count -ne $chapterIds.Count) { throw "Timing JSON must contain eight chapters, found $($chapters.Count)" }
 
   $starts = [System.Collections.Generic.List[double]]::new()
+  $chapterEnds = [System.Collections.Generic.List[double]]::new()
   for ($index = 0; $index -lt $chapterIds.Count; $index++) {
     $id = $chapterIds[$index]
     $chapter = $chapters[$index]
@@ -84,10 +85,16 @@ function Get-CanonicalTimingManifest([string]$Path) {
     if ([math]::Abs($start - $declaredStart) -gt 0.001) { throw "Timing JSON chapter '$id' disagrees with chapterStarts" }
     if (($start + $chapterDuration) -gt ($declaredDuration + 0.001)) { throw "Timing JSON chapter '$id' exceeds audioDurationSeconds" }
     $starts.Add($start)
+    $chapterEnds.Add($start + $chapterDuration)
   }
   if ($starts[0] -ne 0) { throw 'The first narration chapter must start at zero' }
   for ($index = 1; $index -lt $starts.Count; $index++) {
     if ($starts[$index] -le $starts[$index - 1]) { throw 'Narration chapter starts must be strictly increasing' }
+  }
+  for ($index = 0; $index -lt ($chapterEnds.Count - 1); $index++) {
+    if ($chapterEnds[$index] -gt $starts[$index + 1]) {
+      throw "Timing JSON chapter '$($chapterIds[$index])' overlaps the next narration chapter"
+    }
   }
   if ($starts[$starts.Count - 1] -ge $declaredDuration) { throw 'The final narration chapter must start before audioDurationSeconds' }
   return [pscustomobject]@{ audioDurationSeconds = $declaredDuration; chapterStarts = $starts }
@@ -95,15 +102,23 @@ function Get-CanonicalTimingManifest([string]$Path) {
 
 function Test-CaptionOverlayCorrelation([string]$CaptionPath, [string]$OverlayPath, [double]$AudioDuration) {
   Test-Utf8WithoutBom -Path $CaptionPath -Label 'Caption JSON'
-  $captionSource = Get-Content -Raw -LiteralPath $CaptionPath
+  $captionSource = Get-Content -Raw -LiteralPath $CaptionPath -Encoding UTF8
   if (-not $captionSource.TrimStart().StartsWith('[')) { throw 'Caption JSON must be an array' }
   $captions = @((ConvertFrom-Json -InputObject $captionSource) | ForEach-Object { $_ })
+  [double]$previousCaptionEnd = 0
   for ($index = 0; $index -lt $captions.Count; $index++) {
     $caption = $captions[$index]
     if ($caption -isnot [pscustomobject] -or -not $caption.PSObject.Properties['startSeconds'] -or -not $caption.PSObject.Properties['endSeconds'] -or -not $caption.PSObject.Properties['text']) { throw "Caption $($index + 1) is malformed" }
     $start = [double]$caption.startSeconds
     $end = [double]$caption.endSeconds
     if (-not (Test-FiniteDouble $start) -or -not (Test-FiniteDouble $end) -or $start -lt 0 -or $end -le $start -or $end -gt $AudioDuration -or [string]::IsNullOrWhiteSpace([string]$caption.text)) { throw "Caption $($index + 1) is malformed" }
+    $captionLines = @(([string]$caption.text) -split "`r?`n")
+    if ($captionLines.Count -gt 2) { throw "Caption $($index + 1) has more than two lines" }
+    for ($lineIndex = 0; $lineIndex -lt $captionLines.Count; $lineIndex++) {
+      if ($captionLines[$lineIndex].Length -gt 43) { throw "Caption $($index + 1) line $($lineIndex + 1) exceeds 43 characters" }
+    }
+    if ($index -gt 0 -and $start -lt $previousCaptionEnd) { throw "Caption $($index + 1) overlaps the previous caption" }
+    $previousCaptionEnd = $end
   }
   $overlay = Get-Content -Raw -LiteralPath $OverlayPath
   $countMatch = [regex]::Match($overlay, '(?m)^; relay-caption-count=([0-9]+)\r?$')
