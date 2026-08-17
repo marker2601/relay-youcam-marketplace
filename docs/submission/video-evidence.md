@@ -17,4 +17,9 @@ Local release verification completed on August 16, 2026.
 
 The video uses real production-product footage throughout. It demonstrates the primary-decline, independent-backup activation, backup acceptance, and Event ready journey. The binding limitations remain visible and narrated: this prototype collects $0, does not process payments, and does not guarantee delivery, physical fit, availability, or transaction completion.
 
-This task made no upload, public-video, Devpost, or submission change. The existing public video and Devpost state were not re-read or modified as part of this local v2 verification.
+## Publication and Devpost readback
+
+- Published YouTube URL: https://youtu.be/0hUbCwDbn4I
+- YouTube Studio reported the video as public with the locked title, 2:42 display duration, and a completed copyright check with no issues. An independent public watch-page readback resolved to the same title and video ID.
+- Devpost project `relay-xr7byl` read back with `video_url` exactly `https://youtu.be/0hUbCwDbn4I` and the YouCam hackathon entry still `submitted_at: null`.
+- Earlier public Relay videos were retained.

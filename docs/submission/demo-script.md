@@ -1,4 +1,4 @@
-# Relay professional demo script (2:10–2:40 target)
+# Relay professional demo script (published master: 2:41.600 / YouTube display: 2:42)
 
 Capture the verified production flow at 1080p using the existing synthetic, consent-safe shopper image and project-owned garment assets. Show real YouCam Clothes v3 results. Keep credentials, task IDs, object keys, signed URLs, developer tools, copyrighted music, and unrelated marks out of frame.
 
@@ -61,3 +61,9 @@ Capture the verified production flow at 1080p using the existing synthetic, cons
 - [ ] Keep product footage visible for at least 80% of runtime.
 - [ ] Export H.264/AAC 1080p at 30 fps, under three minutes, with authored captions and no music.
 - [ ] Verify the master mechanically, then upload publicly and read the URL back from Devpost.
+
+## Published v2 record
+
+- Public video: https://youtu.be/0hUbCwDbn4I
+- Exact master: `docs/submission/assets/relay-professional-demo-v2.mp4` (161.600000 seconds; SHA-256 `BA1F60AE0C0B9CF13E5A228EDDB9E86560665773CAF5909E665E00064C857ABB`)
+- The published flow adds the approved Human Handoff overlay while retaining real production-product footage and burned-in captions.

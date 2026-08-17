@@ -21,7 +21,7 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 - [x] Full local `ggml-base.en` ASR retained the binding product claims, $0/no-payments disclosures, limitations, and 18% commission hypothesis.
 - [x] All 36 caption midpoints and eight chapter cues were inspected: readable product proof, clear caption/control separation, approved character colors, and no visible credentials, task IDs, signed URLs, private keys, local paths, or unrelated browser content.
 - [x] Fresh repository verification: typecheck; lint (0 errors, 3 known fixture warnings); unit 203/203; single-worker integration 77/77; monolithic 280/280; build; and `git diff --check`.
-- [ ] Publish or attach the verified v2 master. This task intentionally made no upload, public-video, Devpost, or submission change.
+- [x] Published and attached the verified v2 master: https://youtu.be/0hUbCwDbn4I. YouTube displays 2:42; the exact local master is 161.600000 seconds. Studio copyright checks completed with no issues, and Devpost readback returned this URL while `submitted_at` remained null.
 
 ## Relay Rescue behavior gate
 
@@ -58,8 +58,8 @@ Last updated: August 16, 2026. This separates fresh local evidence, previously c
 - [x] Primary decline followed by visible **Backup available**.
 - [x] Backup provider acceptance followed by **Event ready**.
 - [x] Submission thumbnail derived from project-owned assets.
-- [x] Public 2:21 1080p professional YouTube demo showing and explaining YouCam: https://youtu.be/K_iLJKMcykg.
-- [x] Unauthenticated fetch verifies the final video URL is public.
+- [x] Public 2:42 1080p animated professional YouTube demo showing and explaining YouCam: https://youtu.be/0hUbCwDbn4I.
+- [x] Independent public watch-page readback verifies the final video URL and locked title.
 
 Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 
@@ -85,7 +85,7 @@ Use `docs/submission/relay-rescue-shot-list.md` for framing and privacy checks.
 | Technological implementation | Typed Clothes v3 adapter; persisted jobs and private copy; stable assurance roles; bounded readiness; transactional expiry and idempotent failover; deterministic recovery E2E. | Local, CI, production smoke, and real YouCam path passed |
 | Coherent design | One visible promise connects the brief, primary/backup plan, provider deadline, recovery, and **Event ready** outcome. | Implemented and uploaded with four production screenshots |
 | Potential impact | Bounded occasionwear wedge, independent-provider resilience, 18% commission hypothesis, measurable conversion and completion outcomes. | Copy ready; market validation remains a hypothesis |
-| Quality/non-obviousness | YouCam is the visual trust layer inside a demand-first, failure-tolerant two-sided marketplace rather than a catalog widget. | Implemented; public 2:21 professional video proof live |
+| Quality/non-obviousness | YouCam is the visual trust layer inside a demand-first, failure-tolerant two-sided marketplace rather than a catalog widget. | Implemented; public 2:42 animated professional video proof live |
 
 ## Exact local release commands
 

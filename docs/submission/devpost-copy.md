@@ -98,7 +98,7 @@ Payments, deposits, payouts, shipping, delivery, identity verification, damage c
 
 - Repository: https://github.com/marker2601/relay-youcam-marketplace
 - Public demo: https://relay-youcam-marketplace.vercel.app
-- Demo video: https://youtu.be/K_iLJKMcykg (public, 2:21 master; YouTube displays 2:22, 1080p, copyright check passed).
+- Demo video: https://youtu.be/0hUbCwDbn4I (public, 2:41.600 master; YouTube displays 2:42, 1080p, copyright check passed).
 - Project start date: August 14, 2026 (first repository commit).
 - App status: existing Relay prototype with a major Relay Rescue update begun August 16, 2026.
 - Submitter type: **Individual**
