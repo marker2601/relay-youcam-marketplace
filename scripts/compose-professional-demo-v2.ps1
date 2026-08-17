@@ -28,14 +28,6 @@ foreach ($required in @($rawVideo, $captureManifestPath, $narrationPath, $timing
   }
 }
 
-$ffmpegCommand = Get-Command ffmpeg -ErrorAction SilentlyContinue
-$ffprobeCommand = Get-Command ffprobe -ErrorAction SilentlyContinue
-if (-not $ffmpegCommand -or -not $ffprobeCommand) {
-  throw 'ffmpeg and ffprobe must be available on PATH'
-}
-$ffmpeg = $ffmpegCommand.Source
-$ffprobe = $ffprobeCommand.Source
-
 function Get-ProbeDuration([string]$Path) {
   $durationText = (& $ffprobe -v error -show_entries format=duration -of 'default=noprint_wrappers=1:nokey=1' $Path).Trim()
   if ($LASTEXITCODE -ne 0 -or -not $durationText) { throw "ffprobe could not read '$Path'" }
@@ -135,6 +127,14 @@ if ($ValidateOnly) {
   Write-Output "V2 compositor preflight passed: $subtitlePath"
   return
 }
+
+$ffmpegCommand = Get-Command ffmpeg -ErrorAction SilentlyContinue
+$ffprobeCommand = Get-Command ffprobe -ErrorAction SilentlyContinue
+if (-not $ffmpegCommand -or -not $ffprobeCommand) {
+  throw 'ffmpeg and ffprobe must be available on PATH'
+}
+$ffmpeg = $ffmpegCommand.Source
+$ffprobe = $ffprobeCommand.Source
 
 $audioDuration = Get-ProbeDuration $narrationPath
 if ([math]::Abs($audioDuration - $timingManifest.audioDurationSeconds) -gt 0.1) { throw 'Narration WAV duration does not match timing JSON audioDurationSeconds' }

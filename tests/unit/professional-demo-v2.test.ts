@@ -93,15 +93,23 @@ async function createPreflightFixture(): Promise<PreflightFixture> {
   });
 }
 
-async function runCompositorPreflight(fixture: PreflightFixture): Promise<{ stdout: string; stderr: string }> {
+async function runCompositorPreflight(
+  fixture: PreflightFixture,
+  childPath: string = process.env.PATH ?? "",
+): Promise<{ stdout: string; stderr: string }> {
   const powershellExecutable = await resolvePowerShellExecutable();
+  const childEnvironment = { ...process.env };
+  for (const key of Object.keys(childEnvironment)) {
+    if (key.toUpperCase() === "PATH") delete childEnvironment[key];
+  }
+  childEnvironment.PATH = childPath;
   return execFileAsync(powershellExecutable, [
     "-NoProfile",
     "-ExecutionPolicy", "Bypass",
     "-File", compositorPath,
     "-AssetDirectory", fixture.assetDirectory,
     "-ValidateOnly",
-  ], { cwd: fixture.outsideDirectory, windowsHide: true });
+  ], { cwd: fixture.outsideDirectory, env: childEnvironment, windowsHide: true });
 }
 
 async function removePreflightFixture(fixture: PreflightFixture): Promise<void> {
@@ -111,9 +119,13 @@ async function removePreflightFixture(fixture: PreflightFixture): Promise<void> 
   ]);
 }
 
-async function expectPreflightFailure(fixture: PreflightFixture, message: string): Promise<void> {
+async function expectPreflightFailure(
+  fixture: PreflightFixture,
+  message: string,
+  childPath?: string,
+): Promise<void> {
   try {
-    await runCompositorPreflight(fixture);
+    await runCompositorPreflight(fixture, childPath);
     throw new Error("Expected compositor preflight to fail.");
   } catch (error) {
     const details = error instanceof Error && "stderr" in error
@@ -227,6 +239,21 @@ describe("professional demo v2 composition", () => {
       const result = await runCompositorPreflight(fixture);
       expect(result.stdout).toContain("V2 compositor preflight passed");
       expect(result.stdout).toContain(fixture.overlayPath.slice(process.cwd().length + 1).replaceAll("\\", "/"));
+    } finally {
+      await removePreflightFixture(fixture);
+    }
+  });
+
+  it("validates canonical and legacy fixtures without render tools on PATH", async () => {
+    const fixture = await createPreflightFixture();
+    const emptyPath = join(fixture.directory, "no-render-tools");
+    try {
+      await mkdir(emptyPath);
+      const result = await runCompositorPreflight(fixture, emptyPath);
+      expect(result.stdout).toContain("V2 compositor preflight passed");
+
+      await writeFile(fixture.timingPath, JSON.stringify([{ id: "promise", startSeconds: 0 }]), "utf8");
+      await expectPreflightFailure(fixture, "canonical JSON object", emptyPath);
     } finally {
       await removePreflightFixture(fixture);
     }
